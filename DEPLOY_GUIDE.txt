@@ -1,0 +1,124 @@
+====================================================
+  🎲 DICE GAME - GITHUB DEPLOYMENT GUIDE
+====================================================
+
+📋 PREREQUISITES:
+-----------------
+1. GitHub account (you already have this ✅)
+2. Git installed on your computer
+
+   Check if Git is installed:
+   - Open Command Prompt
+   - Type: git --version
+   - If you see a version number, you're good!
+   - If not, download from: https://git-scm.com/download/win
+
+
+🚀 DEPLOYMENT STEPS (EASIEST METHOD):
+--------------------------------------
+
+STEP 1: Create Repository on GitHub
+   1. Go to: https://github.com/new
+   2. Repository name: vibetest (or whatever you want)
+   3. Description: "A dice-based board game with RPG elements"
+   4. Make it PUBLIC (required for free GitHub Pages)
+   5. ❌ Do NOT check "Add a README file"
+   6. ❌ Do NOT add .gitignore or license yet
+   7. Click "Create repository"
+
+STEP 2: Run the Deployment Script
+   1. Go to: D:\Files\Desktop\Claude\Projects\DiceGameTest
+   2. Double-click: deploy-to-github.bat
+   3. Follow the prompts:
+      - Enter your GitHub username
+      - Enter repository name (or press Enter for "vibetest")
+      - Confirm you created the repository
+   4. You may be asked to login to GitHub
+      - Enter your GitHub username
+      - For password, use a Personal Access Token (see below)
+
+STEP 3: Enable GitHub Pages
+   The script will open the settings page automatically, or:
+   1. Go to your repository on GitHub
+   2. Click "Settings" tab
+   3. Click "Pages" in the left sidebar
+   4. Under "Source", select "main" branch
+   5. Click "Save"
+   6. Wait 1-2 minutes for deployment
+
+STEP 4: Play Your Game!
+   After GitHub Pages is enabled:
+   - V1 (Single Player): https://YOUR-USERNAME.github.io/vibetest/v1/
+   - V2 (Type System): https://YOUR-USERNAME.github.io/vibetest/v2/
+
+   Replace YOUR-USERNAME with your actual GitHub username!
+
+
+🔐 GITHUB AUTHENTICATION:
+--------------------------
+If you're asked for a password when pushing, you need a Personal Access Token:
+
+1. Go to: https://github.com/settings/tokens
+2. Click "Generate new token" → "Generate new token (classic)"
+3. Note: "vibetest Deployment"
+4. Expiration: "No expiration" (or choose a duration)
+5. Scopes: Check "repo" (this gives full control of repositories)
+6. Click "Generate token"
+7. COPY THE TOKEN (you won't see it again!)
+8. Use this token as your password when git asks
+
+
+📝 UPDATING YOUR GAME:
+-----------------------
+After making changes to your game:
+
+1. Open Command Prompt in the project folder
+2. Run these commands:
+
+   git add .
+   git commit -m "Updated game with new features"
+   git push
+
+3. Wait 1-2 minutes for GitHub Pages to update
+4. Refresh your game URL
+
+
+❓ TROUBLESHOOTING:
+-------------------
+
+Problem: "git is not recognized"
+Solution: Install Git from https://git-scm.com/download/win
+
+Problem: "remote: Repository not found"
+Solution: Make sure you created the repository on GitHub first
+
+Problem: "Authentication failed"
+Solution: Use a Personal Access Token instead of your password (see above)
+
+Problem: "GitHub Pages not working"
+Solution:
+   - Make sure repository is PUBLIC
+   - Check Settings → Pages is enabled with "main" branch
+   - Wait 2-3 minutes after enabling
+
+Problem: Game shows 404 error
+Solution:
+   - Make sure you include /v1/ or /v2/ in the URL
+   - Check that index.html exists in the v1 or v2 folder
+
+
+🎉 ALTERNATIVE: NETLIFY (NO GIT NEEDED):
+-----------------------------------------
+If GitHub seems too complicated:
+
+1. Go to: https://app.netlify.com/drop
+2. Drag the "v1" or "v2" folder onto the page
+3. Get instant URL!
+4. Sign up to keep it permanent
+
+
+====================================================
+Need help? Check:
+- GitHub Docs: https://docs.github.com/en/pages
+- Git Basics: https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup
+====================================================

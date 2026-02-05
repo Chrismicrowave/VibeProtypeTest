@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dice Board Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Header -->
+        <header>
+            <h1>🎲 Dice Board Game</h1>
+            <div id="game-info">
+                <span>Level: <span id="level-display">1</span></span>
+                <span>Bosses Defeated: <span id="bosses-display">0/3</span></span>
+                <span>Loop: <span id="loop-display">0/5</span></span>
+            </div>
+        </header>
+
+        <!-- Main Game Area -->
+        <main>
+            <!-- Board Section -->
+            <section id="board-section">
+                <div id="game-board">
+                    <!-- 40 tiles will be generated here -->
+                </div>
+            </section>
+
+            <!-- Right Panel -->
+            <aside id="right-panel">
+                <!-- Player Stats -->
+                <div id="player-stats" class="panel">
+                    <h2>
+                        Player Stats 🤺
+                        <button class="collapse-btn" onclick="togglePanel('player-stats')">−</button>
+                    </h2>
+                    <div class="panel-content">
+                        <div class="stat-bars">
+                            <div class="stat-row">
+                                <span>HP</span>
+                                <div class="bar-container">
+                                    <div id="hp-bar" class="bar hp-bar" style="width: 100%"></div>
+                                    <span id="hp-text" class="bar-text">100/100</span>
+                                </div>
+                            </div>
+                            <div class="stat-row">
+                                <span>SP</span>
+                                <div class="bar-container">
+                                    <div id="sp-bar" class="bar sp-bar" style="width: 100%"></div>
+                                    <span id="sp-text" class="bar-text">50/50</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-item">⚔️ ATK: <span id="atk-value">10</span></div>
+                            <div class="stat-item">🛡️ DEF: <span id="def-value">5</span></div>
+                            <div class="stat-item">🍀 LUK: <span id="luk-value">5</span></div>
+                            <div class="stat-item">💰 Money: <span id="money-value">100</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory -->
+                <div id="inventory-panel" class="panel">
+                    <h2>
+                        Inventory 🎒
+                        <button class="collapse-btn" onclick="togglePanel('inventory-panel')">−</button>
+                    </h2>
+                    <div class="panel-content">
+                        <div id="equipped-items">
+                            <div class="equipped-slot">
+                                <span>Weapon:</span>
+                                <div id="equipped-weapon" class="item-slot">-</div>
+                            </div>
+                            <div class="equipped-slot">
+                                <span>Armor:</span>
+                                <div id="equipped-armor" class="item-slot">-</div>
+                            </div>
+                            <div class="equipped-slot">
+                                <span>Rings:</span>
+                                <div id="equipped-rings" class="item-slot">-</div>
+                            </div>
+                        </div>
+                        <div id="inventory-items" class="item-grid">
+                            <!-- Items will appear here -->
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Skills -->
+            <div id="skills-panel" class="panel">
+                <h2>
+                    Skills ⭐
+                    <button class="collapse-btn" onclick="togglePanel('skills-panel')">−</button>
+                </h2>
+                <div class="panel-content">
+                    <div id="active-skills">
+                        <h3>Active</h3>
+                        <div id="active-skills-list" class="skills-list">
+                            <p class="empty-text">No active skills yet</p>
+                        </div>
+                    </div>
+                    <div id="passive-skills">
+                        <h3>Passive</h3>
+                        <div id="passive-skills-list" class="skills-list">
+                            <p class="empty-text">No passive skills yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+    </div>
+
+    <!-- Modal for Combat/Shop/Events -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div id="modal-content" class="modal-content">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
