@@ -938,7 +938,7 @@ function executeCombat() {
                 addLog(`💰 ${t('gained')} ${reward} ${t('coins')}!`);
 
                 setTimeout(() => {
-                    showCombatLootModal();
+                    showLootModal();
                 }, 1500);
                 return;
             }
@@ -986,16 +986,23 @@ function executeCombat() {
     }, 1400);
 }
 
-function showCombatLootModal() {
-    // Generate 1-3 random items
-    const numItems = Math.floor(Math.random() * 3) + 1; // 1-3 items
-    const lootItems = [];
-
-    for (let i = 0; i < numItems; i++) {
-        const itemType = ['weapons', 'armor', 'potions', 'rings'][Math.floor(Math.random() * 4)];
-        const item = createRandomItem(itemType, 1 + gameState.level * 0.2);
-        lootItems.push(item);
+function showLootModal(providedItems = null) {
+    // Use provided items or generate random loot
+    let lootItems;
+    if (providedItems) {
+        lootItems = providedItems;
+    } else {
+        // Generate 1-3 random items for combat
+        const numItems = Math.floor(Math.random() * 3) + 1;
+        lootItems = [];
+        for (let i = 0; i < numItems; i++) {
+            const itemType = ['weapons', 'armor', 'potions', 'rings'][Math.floor(Math.random() * 4)];
+            const item = createRandomItem(itemType, 1 + gameState.level * 0.2);
+            lootItems.push(item);
+        }
     }
+
+    gameState.currentPhase = 'loot';
 
     const modal = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
