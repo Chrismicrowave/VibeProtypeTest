@@ -100,7 +100,10 @@ const TRANSLATIONS = {
         clickToUse: 'Click to use',
         none: 'None',
         noRing: 'No ring',
-        replace: 'Replace'
+        replace: 'Replace',
+        buy: 'Buy',
+        shopItem: 'Shop Item',
+        buyAndReplace: 'Buy & Replace'
     },
     zh: {
         title: '骰子棋盘游戏 V1',
@@ -196,7 +199,10 @@ const TRANSLATIONS = {
         clickToUse: '点击使用',
         none: '无',
         noRing: '无戒指',
-        replace: '替换'
+        replace: '替换',
+        buy: '购买',
+        shopItem: '商品',
+        buyAndReplace: '购买并替换'
     }
 };
 
@@ -1280,49 +1286,110 @@ function openShop() {
         return parts.join(' | ');
     }
 
-    let itemsHTML = gameState.shopItems.map((item, idx) => `
-        <div class="item ${item.type} shop-item-${idx}" style="display: inline-block; margin: 10px; padding: 15px; cursor: pointer; border: 3px solid; min-width: 150px;">
-            <div style="font-size: 2.5em; margin-bottom: 5px;">${item.emoji}</div>
-            <div style="font-weight: bold; margin-bottom: 5px;">${item.name}</div>
-            <div style="color: #666; font-size: 0.85em; margin-bottom: 8px;">${formatItemStats(item)}</div>
-            <div style="color: #f39c12; font-weight: bold; font-size: 1.1em;">💰 ${item.price}</div>
-        </div>
-    `).join('');
+    function getCurrentEquipped(type) {
+        if (type === 'weapon') return gameState.player.equippedWeapon;
+        if (type === 'armor') return gameState.player.equippedArmor;
+        if (type === 'ring') return gameState.player.equippedRing;
+        return null;
+    }
 
-    content.innerHTML = `
-        <h2>🏪 ${t('shop')}</h2>
-        <div style="text-align: center; margin-bottom: 20px;">
-            <strong style="font-size: 1.2em;">${t('yourMoney')}: 💰 ${gameState.player.stats.money}</strong>
-        </div>
-        <div style="text-align: center; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
-            ${itemsHTML}
-        </div>
-        <div class="modal-buttons">
-            <button id="leave-shop-btn" class="modal-btn secondary">${t('leaveShop')}</button>
-        </div>
-    `;
+    function renderShop() {
+        const playerMoney = gameState.player.stats.money;
+
+        let itemsHTML = gameState.shopItems.map((item, idx) => {
+            if (!item) return ''; // Item was bought
+
+            const canAfford = playerMoney >= item.price;
+            const currentEquipped = getCurrentEquipped(item.type);
+
+            // For potions - simple card
+            if (item.type === 'potion') {
+                return `
+                    <div class="shop-item-${idx}" style="display: inline-block; margin: 10px; padding: 15px; border: 3px solid #2ecc71; border-radius: 10px; min-width: 180px; background: #f8f9fa;">
+                        <div style="font-size: 3em; margin-bottom: 5px;">${item.emoji}</div>
+                        <div style="font-weight: bold; margin-bottom: 5px; color: #2c3e50;">${item.name}</div>
+                        <div style="color: #666; font-size: 0.85em; margin-bottom: 10px;">${formatItemStats(item)}</div>
+                        <div style="color: #f39c12; font-weight: bold; margin-bottom: 10px;">💰 ${item.price}</div>
+                        <button class="shop-buy-btn-${idx}" style="padding: 8px 15px; background: ${canAfford ? '#2ecc71' : '#ccc'}; color: white; border: none; border-radius: 5px; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; font-weight: bold;" ${canAfford ? '' : 'disabled'}>
+                            🛒 ${t('buy')}
+                        </button>
+                    </div>
+                `;
+            }
+
+            // For equipment - comparison card
+            const borderColor = item.type === 'weapon' ? '#e74c3c' : item.type === 'armor' ? '#3498db' : '#f39c12';
+            return `
+                <div class="shop-item-${idx}" style="display: inline-block; margin: 10px; padding: 15px; border: 3px solid ${borderColor}; border-radius: 10px; min-width: 300px; background: #f8f9fa;">
+                    <h4 style="text-align: center; color: ${borderColor}; margin-bottom: 10px;">📊 ${t('comparison')}</h4>
+                    <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                        <!-- Current Equipped -->
+                        <div style="flex: 1; text-align: center; background: ${currentEquipped ? '#fff3cd' : '#f5f5f5'}; padding: 10px; border-radius: 8px; border: 2px solid ${currentEquipped ? '#ffc107' : '#ddd'};">
+                            <div style="font-size: 0.75em; color: ${currentEquipped ? '#856404' : '#999'}; font-weight: bold; margin-bottom: 5px;">${t('currentEquipped')}</div>
+                            <div style="font-size: 2em; margin-bottom: 5px;">${currentEquipped ? currentEquipped.emoji : '❌'}</div>
+                            <div style="font-weight: bold; font-size: 0.85em; color: #2c3e50;">${currentEquipped ? currentEquipped.name : t('none')}</div>
+                            ${currentEquipped ? `<div style="color: #666; font-size: 0.75em; margin-top: 5px;">${formatItemStats(currentEquipped)}</div>` : ''}
+                            ${currentEquipped ? `<div style="color: #f39c12; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${currentEquipped.sellValue || Math.floor(currentEquipped.price * 0.6)}</div>` : ''}
+                        </div>
+                        <!-- Arrow -->
+                        <div style="display: flex; align-items: center; font-size: 2em; color: ${borderColor};">➡️</div>
+                        <!-- New Item -->
+                        <div style="flex: 1; text-align: center; background: #d1ecf1; padding: 10px; border-radius: 8px; border: 2px solid #17a2b8;">
+                            <div style="font-size: 0.75em; color: #0c5460; font-weight: bold; margin-bottom: 5px;">${t('shopItem')}</div>
+                            <div style="font-size: 2em; margin-bottom: 5px;">${item.emoji}</div>
+                            <div style="font-weight: bold; font-size: 0.85em; color: #2c3e50;">${item.name}</div>
+                            <div style="color: #666; font-size: 0.75em; margin-top: 5px;">${formatItemStats(item)}</div>
+                            <div style="color: #e74c3c; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${item.price}</div>
+                        </div>
+                    </div>
+                    <button class="shop-buy-btn-${idx}" style="width: 100%; padding: 10px; background: ${canAfford ? '#28a745' : '#ccc'}; color: white; border: none; border-radius: 5px; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; font-weight: bold; font-size: 0.9em;" ${canAfford ? '' : 'disabled'}>
+                        ${canAfford ? `🛒 ${currentEquipped ? t('buyAndReplace') : t('buy')}` : t('notEnoughMoney')}
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        content.innerHTML = `
+            <h2>🏪 ${t('shop')}</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <strong style="font-size: 1.2em;">${t('yourMoney')}: 💰 <span id="shop-money">${playerMoney}</span></strong>
+            </div>
+            <div style="text-align: center; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                ${itemsHTML}
+            </div>
+            <div class="modal-buttons">
+                <button id="leave-shop-btn" class="modal-btn secondary">${t('leaveShop')}</button>
+            </div>
+        `;
+
+        // Add event listeners for buy buttons
+        gameState.shopItems.forEach((item, idx) => {
+            if (!item) return;
+            const buyBtn = content.querySelector(`.shop-buy-btn-${idx}`);
+            if (buyBtn && !buyBtn.disabled) {
+                buyBtn.addEventListener('click', () => {
+                    buyItem(idx);
+                    renderShop(); // Re-render to update money and remove bought item
+                });
+            }
+        });
+
+        // Add event listener for leave button
+        document.getElementById('leave-shop-btn').addEventListener('click', () => {
+            closeModal();
+            gameState.currentPhase = 'playing';
+        });
+    }
 
     modal.classList.remove('hidden');
-
-    // Add event listeners for each shop item
-    gameState.shopItems.forEach((item, idx) => {
-        document.querySelector(`.shop-item-${idx}`).addEventListener('click', () => {
-            buyItem(idx);
-        });
-    });
-
-    // Add event listener for leave button
-    document.getElementById('leave-shop-btn').addEventListener('click', () => {
-        closeModal();
-        gameState.currentPhase = 'playing';
-    });
+    renderShop();
 }
 
 function buyItem(index) {
     const item = gameState.shopItems[index];
+    if (!item) return;
 
     if (!gameState.player.spendMoney(item.price)) {
-        alert(t('notEnoughMoney'));
         return;
     }
 
@@ -1330,12 +1397,8 @@ function buyItem(index) {
 
     // Handle based on item type
     if (item.type === 'potion') {
-        // Potions go to inventory
         gameState.player.inventory.push(item);
         logEvent(`${t('addedToInventory')} ${item.emoji} ${item.name}`);
-        updateInventoryUI();
-        closeModal();
-        gameState.currentPhase = 'playing';
     } else if (item.type === 'weapon') {
         if (gameState.player.equippedWeapon) {
             const oldItem = gameState.player.equippedWeapon;
@@ -1345,10 +1408,6 @@ function buyItem(index) {
         }
         gameState.player.equippedWeapon = item;
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
-        updateUI();
-        updateInventoryUI();
-        closeModal();
-        gameState.currentPhase = 'playing';
     } else if (item.type === 'armor') {
         if (gameState.player.equippedArmor) {
             const oldItem = gameState.player.equippedArmor;
@@ -1358,10 +1417,6 @@ function buyItem(index) {
         }
         gameState.player.equippedArmor = item;
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
-        updateUI();
-        updateInventoryUI();
-        closeModal();
-        gameState.currentPhase = 'playing';
     } else if (item.type === 'ring') {
         if (gameState.player.equippedRing) {
             const oldRing = gameState.player.equippedRing;
@@ -1371,11 +1426,12 @@ function buyItem(index) {
         }
         gameState.player.equippedRing = item;
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
-        updateUI();
-        updateInventoryUI();
-        closeModal();
-        gameState.currentPhase = 'playing';
     }
+
+    // Mark item as bought
+    gameState.shopItems[index] = null;
+    updateUI();
+    updateInventoryUI();
 }
 
 // ========================================
