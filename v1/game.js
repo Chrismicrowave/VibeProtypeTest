@@ -473,6 +473,11 @@ function generateBoard() {
         [tileTypes[i], tileTypes[j]] = [tileTypes[j], tileTypes[i]];
     }
 
+    // TEST MODE: Force shop at 1, combat at 2, treasure at 3
+    tileTypes[1] = 'shop';
+    tileTypes[2] = 'combat';
+    tileTypes[3] = 'treasure';
+
     // Create tiles (32 tiles for perfect loop)
     for (let i = 0; i < 32; i++) {
         board.push({
