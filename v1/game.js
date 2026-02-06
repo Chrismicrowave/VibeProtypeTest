@@ -882,7 +882,7 @@ function showCombatModal(enemy) {
     // Start combat automatically after a short delay
     setTimeout(() => {
         executeCombat();
-    }, 500);
+    }, 100);
 }
 
 function executeCombat() {
@@ -907,7 +907,7 @@ function executeCombat() {
         playerCombatant.classList.add('attacking-left');
         setTimeout(() => {
             playerCombatant.classList.remove('attacking-left');
-        }, 300);
+        }, 60);
 
         const playerDmg = Math.max(1, Math.floor(
             (gameState.player.getTotalAtk() - enemy.def) * (0.8 + Math.random() * 0.4)
@@ -926,7 +926,7 @@ function executeCombat() {
 
             setTimeout(() => {
                 enemyCombatant.classList.remove('hurt');
-            }, 300);
+            }, 60);
 
             if (enemy.hp <= 0) {
                 clearInterval(combatInterval);
@@ -938,7 +938,7 @@ function executeCombat() {
 
                 setTimeout(() => {
                     showLootModal();
-                }, 1500);
+                }, 300);
                 return;
             }
 
@@ -947,7 +947,7 @@ function executeCombat() {
                 enemyCombatant.classList.add('attacking-right');
                 setTimeout(() => {
                     enemyCombatant.classList.remove('attacking-right');
-                }, 300);
+                }, 60);
 
                 const enemyDmg = Math.max(1, Math.floor(
                     (enemy.atk - gameState.player.getTotalDef()) * (0.8 + Math.random() * 0.4)
@@ -967,7 +967,7 @@ function executeCombat() {
 
                     setTimeout(() => {
                         playerCombatant.classList.remove('hurt');
-                    }, 300);
+                    }, 60);
 
                     if (gameState.player.stats.hp <= 0) {
                         clearInterval(combatInterval);
@@ -976,13 +976,13 @@ function executeCombat() {
                         setTimeout(() => {
                             closeModal();
                             gameOver();
-                        }, 1500);
+                        }, 300);
                     }
-                }, 200);
-            }, 400);
-        }, 200);
+                }, 40);
+            }, 80);
+        }, 40);
 
-    }, 1400);
+    }, 280);
 }
 
 function showLootModal(providedItems = null) {
