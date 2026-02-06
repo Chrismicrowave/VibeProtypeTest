@@ -810,10 +810,10 @@ main {
     }
 
     .combat-arena {
-        min-height: 120px !important;
-        padding: 10px !important;
+        min-height: 180px !important;
+        padding: 15px !important;
         flex-direction: row !important;
-        gap: 5px !important;
+        gap: 10px !important;
         justify-content: space-between !important;
         align-items: center !important;
     }
@@ -824,25 +824,26 @@ main {
     }
 
     .combatant-emoji {
-        font-size: 2em !important;
-        margin-bottom: 5px !important;
+        font-size: 3.5em !important;
+        margin-bottom: 8px !important;
     }
 
     .combatant-name {
-        font-size: 0.8em !important;
+        font-size: 1em !important;
+        margin-bottom: 5px !important;
     }
 
     .combatant-hp-container {
-        width: 80px !important;
-        padding: 3px !important;
+        width: 120px !important;
+        padding: 4px !important;
     }
 
     .combatant-hp-bar {
-        height: 15px !important;
+        height: 18px !important;
     }
 
     .combatant-hp-text {
-        font-size: 0.6em !important;
+        font-size: 0.75em !important;
     }
 
     .modal-content {
