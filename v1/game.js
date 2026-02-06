@@ -580,33 +580,33 @@ function updateUI() {
 }
 
 function updateInventoryUI() {
+    // Update inventory items
     const inventoryDiv = document.getElementById('inventory-items');
-    if (!inventoryDiv) return;
+    if (inventoryDiv) {
+        inventoryDiv.innerHTML = '';
 
-    inventoryDiv.innerHTML = '';
-
-    if (gameState.player.inventory.length === 0) {
-        inventoryDiv.innerHTML = `<p class="empty-text">${t('noItems')}</p>`;
-        return;
+        if (gameState.player.inventory.length === 0) {
+            inventoryDiv.innerHTML = `<p class="empty-text">${t('noItems')}</p>`;
+        } else {
+            gameState.player.inventory.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `item ${item.type}`;
+                itemDiv.textContent = item.emoji;
+                const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
+                itemDiv.title = `${item.name}\n${t('leftClick')}\n${t('rightClick')} ${sellPrice} ${t('coins')}`;
+                itemDiv.onclick = () => useItem(index);
+                itemDiv.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    if (confirm(`${t('sellConfirm')} ${item.emoji} ${item.name} ${t('for')} ${sellPrice} ${t('coins')}?`)) {
+                        sellItem(index);
+                    }
+                };
+                inventoryDiv.appendChild(itemDiv);
+            });
+        }
     }
 
-    gameState.player.inventory.forEach((item, index) => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = `item ${item.type}`;
-        itemDiv.textContent = item.emoji;
-        const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
-        itemDiv.title = `${item.name}\n${t('leftClick')}\n${t('rightClick')} ${sellPrice} ${t('coins')}`;
-        itemDiv.onclick = () => useItem(index);
-        itemDiv.oncontextmenu = (e) => {
-            e.preventDefault();
-            if (confirm(`${t('sellConfirm')} ${item.emoji} ${item.name} ${t('for')} ${sellPrice} ${t('coins')}?`)) {
-                sellItem(index);
-            }
-        };
-        inventoryDiv.appendChild(itemDiv);
-    });
-
-    // Update equipped items - make them clickable to unequip
+    // Always update equipped items (separate from inventory)
     const weaponSlot = document.getElementById('equipped-weapon');
     if (weaponSlot) {
         weaponSlot.textContent = gameState.player.equippedWeapon ? gameState.player.equippedWeapon.emoji : '-';
@@ -1164,12 +1164,16 @@ function showCombatLootModal() {
                     }
 
                     lootItems[idx] = null; // Mark as taken
-                    renderLootUI(); // Re-render first
-                    // Update UI after modal re-render to ensure inventory shows correctly
+                    // Update UI immediately
+                    updateUI();
+                    updateInventoryUI();
+                    // Re-render loot panel
+                    renderLootUI();
+                    // Force another UI update after render to ensure changes stick
                     setTimeout(() => {
                         updateUI();
                         updateInventoryUI();
-                    }, 50);
+                    }, 100);
                 });
             }
 
