@@ -4,8 +4,8 @@ A browser-based dice board game with RPG elements, built with vanilla JavaScript
 
 ## 🎮 Play Online
 
-- **V1**: [Live Demo - Single Player Version](https://yourusername.github.io/vibetest/v1/)
-- **V2**: [Live Demo - Type System Version](https://yourusername.github.io/vibetest/v2/)
+- **V1**: [Live Demo - Single Player Version](https://chrismicrowave.github.io/VibeProtypeTest/v1/)
+- **V2**: [Live Demo - Type System Version](https://chrismicrowave.github.io/VibeProtypeTest/v2/)
 
 ## 🌟 Features
 
