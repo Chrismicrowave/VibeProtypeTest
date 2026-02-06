@@ -842,8 +842,11 @@ main {
     }
 
     .modal-content {
-        max-width: 95%;
-        padding: 15px;
+        max-width: 100%;
+        width: calc(100% - 16px);
+        margin: 8px;
+        padding: 12px;
+        border-radius: 10px;
     }
 
     header {
