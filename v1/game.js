@@ -907,7 +907,7 @@ function executeCombat() {
         playerCombatant.classList.add('attacking-left');
         setTimeout(() => {
             playerCombatant.classList.remove('attacking-left');
-        }, 60);
+        }, 150);
 
         const playerDmg = Math.max(1, Math.floor(
             (gameState.player.getTotalAtk() - enemy.def) * (0.8 + Math.random() * 0.4)
@@ -926,7 +926,7 @@ function executeCombat() {
 
             setTimeout(() => {
                 enemyCombatant.classList.remove('hurt');
-            }, 60);
+            }, 150);
 
             if (enemy.hp <= 0) {
                 clearInterval(combatInterval);
@@ -938,7 +938,7 @@ function executeCombat() {
 
                 setTimeout(() => {
                     showLootModal();
-                }, 300);
+                }, 750);
                 return;
             }
 
@@ -947,7 +947,7 @@ function executeCombat() {
                 enemyCombatant.classList.add('attacking-right');
                 setTimeout(() => {
                     enemyCombatant.classList.remove('attacking-right');
-                }, 60);
+                }, 150);
 
                 const enemyDmg = Math.max(1, Math.floor(
                     (enemy.atk - gameState.player.getTotalDef()) * (0.8 + Math.random() * 0.4)
@@ -967,7 +967,7 @@ function executeCombat() {
 
                     setTimeout(() => {
                         playerCombatant.classList.remove('hurt');
-                    }, 60);
+                    }, 150);
 
                     if (gameState.player.stats.hp <= 0) {
                         clearInterval(combatInterval);
@@ -976,13 +976,13 @@ function executeCombat() {
                         setTimeout(() => {
                             closeModal();
                             gameOver();
-                        }, 300);
+                        }, 750);
                     }
-                }, 40);
-            }, 80);
-        }, 40);
+                }, 100);
+            }, 200);
+        }, 100);
 
-    }, 280);
+    }, 700);
 }
 
 function showLootModal(providedItems = null) {
