@@ -99,7 +99,7 @@ const TRANSLATIONS = {
         addToInventory: 'Add to Inventory',
         clickToUse: 'Click to use',
         none: 'None',
-        currentRings: 'Current Rings',
+        noRing: 'No ring',
         replace: 'Replace'
     },
     zh: {
@@ -195,7 +195,7 @@ const TRANSLATIONS = {
         addToInventory: '添加到背包',
         clickToUse: '点击使用',
         none: '无',
-        currentRings: '当前戒指',
+        noRing: '无戒指',
         replace: '替换'
     }
 };
@@ -303,7 +303,7 @@ class Player {
         this.inventory = [];
         this.equippedWeapon = null;
         this.equippedArmor = null;
-        this.equippedRings = [];
+        this.equippedRing = null;
         this.skills = [];
         this.passiveBuffs = [];
         this.persistedItem = null; // Item carried over from previous game
@@ -597,25 +597,21 @@ function updateInventoryUI() {
     if (inventoryDiv) {
         inventoryDiv.innerHTML = '';
 
-        // Filter to only show potions in inventory
-        const potions = gameState.player.inventory.filter(item => item.type === 'potion');
-
-        if (potions.length === 0) {
+        if (gameState.player.inventory.length === 0) {
             inventoryDiv.innerHTML = `<p class="empty-text">${t('noItems')}</p>`;
         } else {
-            potions.forEach((item, index) => {
-                const realIndex = gameState.player.inventory.indexOf(item);
+            gameState.player.inventory.forEach((item, index) => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `item ${item.type}`;
                 itemDiv.textContent = item.emoji;
                 itemDiv.title = `${item.name}\n${t('clickToUse')}`;
-                itemDiv.onclick = () => useItem(realIndex);
+                itemDiv.onclick = () => useItem(index);
                 inventoryDiv.appendChild(itemDiv);
             });
         }
     }
 
-    // Update equipped items display (view only, no click to unequip)
+    // Update equipped items display (view only)
     const weaponSlot = document.getElementById('equipped-weapon');
     if (weaponSlot) {
         weaponSlot.textContent = gameState.player.equippedWeapon ? gameState.player.equippedWeapon.emoji : '-';
@@ -628,20 +624,10 @@ function updateInventoryUI() {
         armorSlot.title = gameState.player.equippedArmor ? gameState.player.equippedArmor.name : t('noArmor');
     }
 
-    const ringsSlot = document.getElementById('equipped-rings');
-    if (ringsSlot) {
-        if (gameState.player.equippedRings.length > 0) {
-            ringsSlot.innerHTML = '';
-            gameState.player.equippedRings.forEach((ring) => {
-                const ringSpan = document.createElement('span');
-                ringSpan.textContent = ring.emoji;
-                ringSpan.style.margin = '0 2px';
-                ringSpan.title = ring.name;
-                ringsSlot.appendChild(ringSpan);
-            });
-        } else {
-            ringsSlot.textContent = '-';
-        }
+    const ringSlot = document.getElementById('equipped-rings');
+    if (ringSlot) {
+        ringSlot.textContent = gameState.player.equippedRing ? gameState.player.equippedRing.emoji : '-';
+        ringSlot.title = gameState.player.equippedRing ? gameState.player.equippedRing.name : t('noRing');
     }
 }
 
@@ -1095,58 +1081,42 @@ function showCombatLootModal() {
                 `;
             }
 
-            // For rings - show comparison if 2 rings equipped
+            // For rings - same comparison as weapon/armor (single slot)
             if (item.type === 'ring') {
-                const ringsFull = gameState.player.equippedRings.length >= 2;
-                if (ringsFull) {
-                    return `
-                        <div class="loot-item-${idx}" style="display: inline-block; margin: 10px; padding: 15px; border: 3px solid #f39c12; border-radius: 10px; min-width: 300px; background: #f8f9fa;">
-                            <h4 style="text-align: center; color: #f39c12; margin-bottom: 10px;">💍 ${t('ringSlotsFull')}</h4>
-                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                                <!-- Current Rings -->
-                                <div style="flex: 1; text-align: center; background: #fff3cd; padding: 10px; border-radius: 8px; border: 2px solid #ffc107;">
-                                    <div style="font-size: 0.75em; color: #856404; font-weight: bold; margin-bottom: 5px;">${t('currentRings')}</div>
-                                    <div style="font-size: 1.5em; margin-bottom: 5px;">${gameState.player.equippedRings.map(r => r.emoji).join(' ')}</div>
-                                    <div style="font-size: 0.75em; color: #666;">${gameState.player.equippedRings.map(r => r.name).join(', ')}</div>
-                                </div>
-                                <!-- New Ring -->
-                                <div style="flex: 1; text-align: center; background: #d1ecf1; padding: 10px; border-radius: 8px; border: 2px solid #17a2b8;">
-                                    <div style="font-size: 0.75em; color: #0c5460; font-weight: bold; margin-bottom: 5px;">${t('newItem')}</div>
-                                    <div style="font-size: 2em; margin-bottom: 5px;">${item.emoji}</div>
-                                    <div style="font-weight: bold; font-size: 0.85em;">${item.name}</div>
-                                    <div style="color: #666; font-size: 0.75em;">${formatItemStats(item)}</div>
-                                </div>
+                const currentRing = gameState.player.equippedRing;
+                return `
+                    <div class="loot-item-${idx}" style="display: inline-block; margin: 10px; padding: 15px; border: 3px solid #f39c12; border-radius: 10px; min-width: 300px; background: #f8f9fa;">
+                        <h4 style="text-align: center; color: #f39c12; margin-bottom: 10px;">💍 ${t('comparison')}</h4>
+                        <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                            <!-- Current Equipped -->
+                            <div style="flex: 1; text-align: center; background: ${currentRing ? '#fff3cd' : '#f5f5f5'}; padding: 10px; border-radius: 8px; border: 2px solid ${currentRing ? '#ffc107' : '#ddd'};">
+                                <div style="font-size: 0.75em; color: ${currentRing ? '#856404' : '#999'}; font-weight: bold; margin-bottom: 5px;">${t('currentEquipped')}</div>
+                                <div style="font-size: 2em; margin-bottom: 5px;">${currentRing ? currentRing.emoji : '❌'}</div>
+                                <div style="font-weight: bold; font-size: 0.85em; color: #2c3e50;">${currentRing ? currentRing.name : t('none')}</div>
+                                ${currentRing ? `<div style="color: #666; font-size: 0.75em; margin-top: 5px;">${formatItemStats(currentRing)}</div>` : ''}
+                                ${currentRing ? `<div style="color: #f39c12; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${currentRing.sellValue || Math.floor(currentRing.price * 0.6)}</div>` : ''}
                             </div>
-                            <div style="display: flex; flex-direction: column; gap: 5px;">
-                                <button class="loot-replace-ring-0-${idx}" style="padding: 8px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                                    🔄 ${t('replace')} ${gameState.player.equippedRings[0].emoji} ${gameState.player.equippedRings[0].name}
-                                </button>
-                                <button class="loot-replace-ring-1-${idx}" style="padding: 8px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                                    🔄 ${t('replace')} ${gameState.player.equippedRings[1].emoji} ${gameState.player.equippedRings[1].name}
-                                </button>
-                                <button class="loot-sell-btn-${idx}" style="padding: 8px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                                    💰 ${t('sell')} (${sellPrice})
-                                </button>
+                            <!-- Arrow -->
+                            <div style="display: flex; align-items: center; font-size: 2em; color: #f39c12;">➡️</div>
+                            <!-- New Item -->
+                            <div style="flex: 1; text-align: center; background: #d1ecf1; padding: 10px; border-radius: 8px; border: 2px solid #17a2b8;">
+                                <div style="font-size: 0.75em; color: #0c5460; font-weight: bold; margin-bottom: 5px;">${t('newItem')}</div>
+                                <div style="font-size: 2em; margin-bottom: 5px;">${item.emoji}</div>
+                                <div style="font-weight: bold; font-size: 0.85em; color: #2c3e50;">${item.name}</div>
+                                <div style="color: #666; font-size: 0.75em; margin-top: 5px;">${formatItemStats(item)}</div>
+                                <div style="color: #17a2b8; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${sellPrice}</div>
                             </div>
                         </div>
-                    `;
-                } else {
-                    return `
-                        <div class="loot-item-${idx}" style="display: inline-block; margin: 10px; padding: 15px; border: 3px solid #f39c12; border-radius: 10px; min-width: 180px; background: #f8f9fa;">
-                            <div style="font-size: 3em; margin-bottom: 5px;">${item.emoji}</div>
-                            <div style="font-weight: bold; margin-bottom: 5px; color: #2c3e50;">${item.name}</div>
-                            <div style="color: #666; font-size: 0.85em; margin-bottom: 10px;">${formatItemStats(item)}</div>
-                            <div style="display: flex; flex-direction: column; gap: 5px;">
-                                <button class="loot-equip-btn-${idx}" style="padding: 8px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                                    💍 ${t('equip')}
-                                </button>
-                                <button class="loot-sell-btn-${idx}" style="padding: 8px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                                    💰 ${t('sell')} (${sellPrice})
-                                </button>
-                            </div>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <button class="loot-equip-btn-${idx}" style="padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em;">
+                                ✅ ${currentRing ? t('equipNewSellOld') : t('equip')}
+                            </button>
+                            <button class="loot-sell-btn-${idx}" style="padding: 10px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em;">
+                                ${currentRing ? `❌ ${t('keepOldSellNew')}` : `💰 ${t('sell')} (${sellPrice})`}
+                            </button>
                         </div>
-                    `;
-                }
+                    </div>
+                `;
             }
 
             return '';
@@ -1225,7 +1195,13 @@ function showCombatLootModal() {
                         gameState.player.equippedArmor = item;
                         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
                     } else if (item.type === 'ring') {
-                        gameState.player.equippedRings.push(item);
+                        if (gameState.player.equippedRing) {
+                            const oldItem = gameState.player.equippedRing;
+                            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.6);
+                            gameState.player.gainMoney(oldSellPrice);
+                            logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
+                        }
+                        gameState.player.equippedRing = item;
                         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
                     }
                     lootItems[idx] = null;
@@ -1248,39 +1224,6 @@ function showCombatLootModal() {
                 });
             }
 
-            // Ring: Replace ring 0
-            const replaceRing0 = content.querySelector(`.loot-replace-ring-0-${idx}`);
-            if (replaceRing0) {
-                replaceRing0.addEventListener('click', () => {
-                    const oldRing = gameState.player.equippedRings[0];
-                    const oldSellPrice = oldRing.sellValue || Math.floor(oldRing.price * 0.6);
-                    gameState.player.gainMoney(oldSellPrice);
-                    logEvent(`${t('sold')} ${oldRing.emoji} ${oldRing.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
-                    gameState.player.equippedRings[0] = item;
-                    logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
-                    lootItems[idx] = null;
-                    updateUI();
-                    updateInventoryUI();
-                    renderLootUI();
-                });
-            }
-
-            // Ring: Replace ring 1
-            const replaceRing1 = content.querySelector(`.loot-replace-ring-1-${idx}`);
-            if (replaceRing1) {
-                replaceRing1.addEventListener('click', () => {
-                    const oldRing = gameState.player.equippedRings[1];
-                    const oldSellPrice = oldRing.sellValue || Math.floor(oldRing.price * 0.6);
-                    gameState.player.gainMoney(oldSellPrice);
-                    logEvent(`${t('sold')} ${oldRing.emoji} ${oldRing.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
-                    gameState.player.equippedRings[1] = item;
-                    logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
-                    lootItems[idx] = null;
-                    updateUI();
-                    updateInventoryUI();
-                    renderLootUI();
-                });
-            }
         });
 
         // Add event listener for close button
@@ -1420,16 +1363,13 @@ function buyItem(index) {
         closeModal();
         gameState.currentPhase = 'playing';
     } else if (item.type === 'ring') {
-        if (gameState.player.equippedRings.length >= 2) {
-            // Replace first ring, sell old one
-            const oldRing = gameState.player.equippedRings[0];
+        if (gameState.player.equippedRing) {
+            const oldRing = gameState.player.equippedRing;
             const oldSellPrice = oldRing.sellValue || Math.floor(oldRing.price * 0.6);
             gameState.player.gainMoney(oldSellPrice);
             logEvent(`${t('sold')} ${oldRing.emoji} ${oldRing.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
-            gameState.player.equippedRings[0] = item;
-        } else {
-            gameState.player.equippedRings.push(item);
         }
+        gameState.player.equippedRing = item;
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
         updateUI();
         updateInventoryUI();
