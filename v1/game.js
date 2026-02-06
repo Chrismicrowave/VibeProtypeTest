@@ -600,20 +600,44 @@ function updateInventoryUI() {
     // Update equipped items display (view only)
     const weaponSlot = document.getElementById('equipped-weapon');
     if (weaponSlot) {
-        weaponSlot.textContent = gameState.player.equippedWeapon ? gameState.player.equippedWeapon.emoji : '-';
-        weaponSlot.title = gameState.player.equippedWeapon ? gameState.player.equippedWeapon.name : t('noWeapon');
+        if (gameState.player.equippedWeapon) {
+            weaponSlot.textContent = gameState.player.equippedWeapon.emoji;
+            weaponSlot.title = gameState.player.equippedWeapon.name;
+            weaponSlot.style.fontSize = '';
+            weaponSlot.style.color = '';
+        } else {
+            weaponSlot.textContent = t('noWeapon');
+            weaponSlot.style.fontSize = '0.7em';
+            weaponSlot.style.color = '#999';
+        }
     }
 
     const armorSlot = document.getElementById('equipped-armor');
     if (armorSlot) {
-        armorSlot.textContent = gameState.player.equippedArmor ? gameState.player.equippedArmor.emoji : '-';
-        armorSlot.title = gameState.player.equippedArmor ? gameState.player.equippedArmor.name : t('noArmor');
+        if (gameState.player.equippedArmor) {
+            armorSlot.textContent = gameState.player.equippedArmor.emoji;
+            armorSlot.title = gameState.player.equippedArmor.name;
+            armorSlot.style.fontSize = '';
+            armorSlot.style.color = '';
+        } else {
+            armorSlot.textContent = t('noArmor');
+            armorSlot.style.fontSize = '0.7em';
+            armorSlot.style.color = '#999';
+        }
     }
 
     const ringSlot = document.getElementById('equipped-rings');
     if (ringSlot) {
-        ringSlot.textContent = gameState.player.equippedRing ? gameState.player.equippedRing.emoji : '-';
-        ringSlot.title = gameState.player.equippedRing ? gameState.player.equippedRing.name : t('noRing');
+        if (gameState.player.equippedRing) {
+            ringSlot.textContent = gameState.player.equippedRing.emoji;
+            ringSlot.title = gameState.player.equippedRing.name;
+            ringSlot.style.fontSize = '';
+            ringSlot.style.color = '';
+        } else {
+            ringSlot.textContent = t('noRing');
+            ringSlot.style.fontSize = '0.7em';
+            ringSlot.style.color = '#999';
+        }
     }
 }
 
@@ -1252,12 +1276,13 @@ function showLootModal(providedItems = null) {
 function openShop() {
     gameState.currentPhase = 'shop';
 
-    gameState.shopItems = [
-        createRandomItem('weapons', 1 + gameState.level * 0.3),
-        createRandomItem('armor', 1 + gameState.level * 0.3),
-        createRandomItem('potions', 1),
-        createRandomItem('rings', 1 + gameState.level * 0.2)
-    ];
+    // Generate 3 random items
+    const itemTypes = ['weapons', 'armor', 'potions', 'rings'];
+    gameState.shopItems = [];
+    for (let i = 0; i < 3; i++) {
+        const randomType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+        gameState.shopItems.push(createRandomItem(randomType, 1 + gameState.level * 0.3));
+    }
 
     const modal = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
