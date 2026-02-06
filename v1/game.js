@@ -451,39 +451,14 @@ function createRandomItem(category, levelScale = 1) {
 
 function generateBoard() {
     const board = [];
-    const distribution = {
-        shop: 4,
-        combat: 12,
-        treasure: 6,
-        skillTrainer: 4,
-        empty: 6
-    };
 
-    // Create array of tile types
-    const tileTypes = [];
-    for (let type in distribution) {
-        for (let i = 0; i < distribution[type]; i++) {
-            tileTypes.push(type);
-        }
-    }
-
-    // Shuffle
-    for (let i = tileTypes.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [tileTypes[i], tileTypes[j]] = [tileTypes[j], tileTypes[i]];
-    }
-
-    // TEST MODE: Force shop at 1, combat at 2, treasure at 3
-    tileTypes[1] = 'shop';
-    tileTypes[2] = 'combat';
-    tileTypes[3] = 'treasure';
-
-    // Create tiles (32 tiles for perfect loop)
+    // TEST MODE: Only shop and combat tiles
     for (let i = 0; i < 32; i++) {
+        const type = i % 2 === 0 ? 'shop' : 'combat';
         board.push({
             id: i,
-            type: tileTypes[i],
-            emoji: TILE_EMOJIS[tileTypes[i]]
+            type: type,
+            emoji: TILE_EMOJIS[type]
         });
     }
 
