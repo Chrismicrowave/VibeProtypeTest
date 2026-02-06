@@ -1134,9 +1134,12 @@ function showCombatLootModal() {
                         gameState.player.equippedArmor = item;
                         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
                     } else if (item.type === 'potion') {
+                        // Use potion immediately - do NOT add to inventory
+                        let used = false;
                         if (item.stats.hp) {
                             gameState.player.heal(item.stats.hp);
                             logEvent(`${t('used')} ${item.emoji} ${item.name}, ${t('healed')} ${item.stats.hp} HP`);
+                            used = true;
                         }
                         if (item.stats.sp) {
                             gameState.player.stats.sp = Math.min(
@@ -1144,6 +1147,10 @@ function showCombatLootModal() {
                                 gameState.player.stats.sp + item.stats.sp
                             );
                             logEvent(`${t('used')} ${item.emoji} ${item.name}, ${t('restored')} ${item.stats.sp} SP`);
+                            used = true;
+                        }
+                        if (!used) {
+                            logEvent(`${t('used')} ${item.emoji} ${item.name}`);
                         }
                     } else if (item.type === 'ring') {
                         if (gameState.player.equippedRings.length < 2) {
@@ -1157,9 +1164,12 @@ function showCombatLootModal() {
                     }
 
                     lootItems[idx] = null; // Mark as taken
-                    updateUI();
-                    updateInventoryUI();
-                    renderLootUI(); // Re-render
+                    renderLootUI(); // Re-render first
+                    // Update UI after modal re-render to ensure inventory shows correctly
+                    setTimeout(() => {
+                        updateUI();
+                        updateInventoryUI();
+                    }, 50);
                 });
             }
 
