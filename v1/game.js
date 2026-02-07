@@ -335,7 +335,11 @@ const gameState = {
     currentPhase: 'playing', // 'playing', 'combat', 'shop', 'gameOver', 'boss'
     isRolling: false,
     currentEnemy: null, // Store current enemy for combat
-    shopItems: [] // Store current shop items
+    shopItems: [], // Store current shop items
+    combatState: {
+        enemyFrozen: false,
+        enemyPoison: { active: false, percent: 0, turnsLeft: 0 }
+    }
 };
 
 // ========================================
@@ -940,6 +944,34 @@ function generateEnemy() {
     };
 }
 
+function getPlayerAttackBuffs() {
+    const buffs = [];
+    if (gameState.player.equippedWeapon?.buffs) {
+        buffs.push(...gameState.player.equippedWeapon.buffs);
+    }
+    if (gameState.player.equippedRing?.buffs) {
+        buffs.push(...gameState.player.equippedRing.buffs.filter(b =>
+            BUFF_CONFIG[b.type]?.type === 'attack'
+        ));
+    }
+    return buffs;
+}
+
+function getPlayerDefenseBuffs() {
+    const buffs = [];
+    if (gameState.player.equippedArmor?.buffs) {
+        buffs.push(...gameState.player.equippedArmor.buffs);
+    }
+    return buffs;
+}
+
+function resetCombatState() {
+    gameState.combatState = {
+        enemyFrozen: false,
+        enemyPoison: { active: false, percent: 0, turnsLeft: 0 }
+    };
+}
+
 function showCombatModal(enemy) {
     const modal = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
@@ -1000,84 +1032,204 @@ function executeCombat() {
         combatLog.scrollTop = combatLog.scrollHeight;
     }
 
+    function updateEnemyHpBar() {
+        const enemyHpPercent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
+        document.getElementById('enemy-hp-bar').style.width = `${enemyHpPercent}%`;
+        document.getElementById('enemy-hp-text').textContent = `${Math.max(0, enemy.hp)}/${enemy.maxHp}`;
+    }
+
+    function updatePlayerHpBar() {
+        const playerHpPercent = (gameState.player.stats.hp / gameState.player.stats.maxHp) * 100;
+        document.getElementById('combat-player-hp-bar').style.width = `${playerHpPercent}%`;
+        document.getElementById('combat-player-hp-text').textContent =
+            `${gameState.player.stats.hp}/${gameState.player.stats.maxHp}`;
+    }
+
+    function handleVictory() {
+        addLog(`🎉 ${t('victoryMsg')} ${t('defeatedEnemy')} ${enemy.name}!`);
+
+        const reward = Math.floor((20 + Math.random() * 30) * gameState.level);
+        gameState.player.gainMoney(reward);
+        addLog(`💰 ${t('gained')} ${reward} ${t('coins')}!`);
+
+        resetCombatState();
+
+        setTimeout(() => {
+            showLootModal();
+        }, TIMING.victoryDelay);
+    }
+
+    function handleDefeat() {
+        addLog(`💀 ${t('defeated')}`);
+
+        resetCombatState();
+
+        setTimeout(() => {
+            closeModal();
+            gameOver();
+        }, TIMING.defeatDelay);
+    }
+
     let turn = 0;
     const combatInterval = setInterval(() => {
         turn++;
 
+        // ========== PLAYER TURN ==========
         // Player turn - Attack animation
         playerCombatant.classList.add('attacking-left');
         setTimeout(() => {
             playerCombatant.classList.remove('attacking-left');
         }, TIMING.attackAnimation);
 
-        const playerDmg = Math.max(1, Math.floor(
+        // Calculate base damage
+        let playerDmg = Math.max(1, Math.floor(
             (gameState.player.getTotalAtk() - enemy.def) * (0.8 + Math.random() * 0.4)
         ));
+
+        // Check for critical hit
+        let isCrit = false;
+        if (Math.random() * 100 < gameState.player.stats.crit) {
+            playerDmg = Math.floor(playerDmg * CRIT_MULTIPLIER);
+            isCrit = true;
+        }
 
         // Enemy hurt animation
         setTimeout(() => {
             enemyCombatant.classList.add('hurt');
             enemy.hp -= playerDmg;
+
+            if (isCrit) {
+                addLog(`⚡ Critical Hit!`);
+            }
             addLog(`🤺 ${t('dealtDamage')} ${playerDmg} ${t('damage')}!`);
 
-            // Update enemy HP bar
-            const enemyHpPercent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
-            document.getElementById('enemy-hp-bar').style.width = `${enemyHpPercent}%`;
-            document.getElementById('enemy-hp-text').textContent = `${Math.max(0, enemy.hp)}/${enemy.maxHp}`;
+            updateEnemyHpBar();
 
             setTimeout(() => {
                 enemyCombatant.classList.remove('hurt');
             }, TIMING.hurtAnimation);
 
+            // Process attack buffs
+            const attackBuffs = getPlayerAttackBuffs();
+            for (const buff of attackBuffs) {
+                if (buff.type === 'LIFESTEAL') {
+                    const heal = Math.floor(playerDmg * buff.value / 100);
+                    gameState.player.heal(heal);
+                    addLog(`🧛 Life Steal +${heal} HP!`);
+                    updatePlayerHpBar();
+                } else if (buff.type === 'FREEZE') {
+                    if (!gameState.combatState.enemyFrozen && Math.random() * 100 < buff.value) {
+                        gameState.combatState.enemyFrozen = true;
+                        addLog(`❄️ Enemy frozen!`);
+                    }
+                } else if (buff.type === 'POISON') {
+                    if (!gameState.combatState.enemyPoison.active && Math.random() * 100 < buff.value) {
+                        gameState.combatState.enemyPoison = {
+                            active: true,
+                            percent: buff.value,
+                            turnsLeft: 3
+                        };
+                        addLog(`☠️ Enemy poisoned!`);
+                    }
+                }
+            }
+
+            // Check for enemy death after player attack
             if (enemy.hp <= 0) {
                 clearInterval(combatInterval);
-                addLog(`🎉 ${t('victoryMsg')} ${t('defeatedEnemy')} ${enemy.name}!`);
-
-                const reward = Math.floor((20 + Math.random() * 30) * gameState.level);
-                gameState.player.gainMoney(reward);
-                addLog(`💰 ${t('gained')} ${reward} ${t('coins')}!`);
-
-                setTimeout(() => {
-                    showLootModal();
-                }, TIMING.victoryDelay);
+                handleVictory();
                 return;
             }
 
-            // Enemy turn - Attack animation after player's turn
+            // ========== ENEMY TURN ==========
             setTimeout(() => {
+                // Check if enemy is frozen
+                if (gameState.combatState.enemyFrozen) {
+                    addLog(`❄️ Enemy is frozen!`);
+                    gameState.combatState.enemyFrozen = false;
+                    return; // Skip enemy turn
+                }
+
+                // Apply poison damage first
+                if (gameState.combatState.enemyPoison.active) {
+                    const poisonDmg = Math.floor(enemy.maxHp * gameState.combatState.enemyPoison.percent / 100);
+                    enemy.hp -= poisonDmg;
+                    gameState.combatState.enemyPoison.turnsLeft--;
+                    addLog(`☠️ Poison deals ${poisonDmg}!`);
+                    updateEnemyHpBar();
+
+                    // Check if poison expired
+                    if (gameState.combatState.enemyPoison.turnsLeft <= 0) {
+                        gameState.combatState.enemyPoison = { active: false, percent: 0, turnsLeft: 0 };
+                    }
+
+                    // Check for enemy death after poison
+                    if (enemy.hp <= 0) {
+                        clearInterval(combatInterval);
+                        handleVictory();
+                        return;
+                    }
+                }
+
+                // Enemy attack animation
                 enemyCombatant.classList.add('attacking-right');
                 setTimeout(() => {
                     enemyCombatant.classList.remove('attacking-right');
                 }, TIMING.attackAnimation);
 
-                const enemyDmg = Math.max(1, Math.floor(
+                // Calculate enemy damage
+                let enemyDmg = Math.max(1, Math.floor(
                     (enemy.atk - gameState.player.getTotalDef()) * (0.8 + Math.random() * 0.4)
                 ));
 
+                // Check player defense buffs
+                const defenseBuffs = getPlayerDefenseBuffs();
+                let blocked = false;
+                let reflectDmg = 0;
+
+                for (const buff of defenseBuffs) {
+                    if (buff.type === 'AUTO_BLOCK') {
+                        if (Math.random() * 100 < buff.value) {
+                            blocked = true;
+                            addLog(`🛡️ Blocked!`);
+                            break;
+                        }
+                    } else if (buff.type === 'REFLECT') {
+                        reflectDmg = Math.floor(enemyDmg * buff.value / 100);
+                    }
+                }
+
                 // Player hurt animation
                 setTimeout(() => {
-                    playerCombatant.classList.add('hurt');
-                    gameState.player.takeDamage(enemyDmg);
-                    addLog(`${enemy.emoji} ${enemy.name} ${t('enemyDealt')} ${enemyDmg} ${t('damage')}!`);
+                    if (!blocked) {
+                        playerCombatant.classList.add('hurt');
+                        gameState.player.takeDamage(enemyDmg);
+                        addLog(`${enemy.emoji} ${enemy.name} ${t('enemyDealt')} ${enemyDmg} ${t('damage')}!`);
 
-                    // Update player HP bar
-                    const playerHpPercent = (gameState.player.stats.hp / gameState.player.stats.maxHp) * 100;
-                    document.getElementById('combat-player-hp-bar').style.width = `${playerHpPercent}%`;
-                    document.getElementById('combat-player-hp-text').textContent =
-                        `${gameState.player.stats.hp}/${gameState.player.stats.maxHp}`;
+                        updatePlayerHpBar();
 
-                    setTimeout(() => {
-                        playerCombatant.classList.remove('hurt');
-                    }, TIMING.hurtAnimation);
+                        // Apply reflect damage to enemy
+                        if (reflectDmg > 0) {
+                            enemy.hp -= reflectDmg;
+                            addLog(`↩️ Reflected ${reflectDmg}!`);
+                            updateEnemyHpBar();
 
-                    if (gameState.player.stats.hp <= 0) {
-                        clearInterval(combatInterval);
-                        addLog(`💀 ${t('defeated')}`);
+                            // Check for enemy death after reflect
+                            if (enemy.hp <= 0) {
+                                clearInterval(combatInterval);
+                                handleVictory();
+                                return;
+                            }
+                        }
 
                         setTimeout(() => {
-                            closeModal();
-                            gameOver();
-                        }, TIMING.defeatDelay);
+                            playerCombatant.classList.remove('hurt');
+                        }, TIMING.hurtAnimation);
+
+                        if (gameState.player.stats.hp <= 0) {
+                            clearInterval(combatInterval);
+                            handleDefeat();
+                        }
                     }
                 }, TIMING.playerHurtDelay);
             }, TIMING.enemyTurnDelay);
