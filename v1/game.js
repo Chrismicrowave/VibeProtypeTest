@@ -546,7 +546,7 @@ class Player {
     }
 
     takeDamage(amount) {
-        const actualDamage = Math.max(1, amount - this.stats.def);
+        const actualDamage = Math.max(1, amount - this.getTotalDef());
         this.stats.hp = Math.max(0, this.stats.hp - actualDamage);
         updateUI();
         return actualDamage;
@@ -1781,8 +1781,8 @@ function executeCombat() {
 
                         if (enemyDmg > 0) {
                             playerCombatant.classList.add('hurt');
-                            gameState.player.takeDamage(enemyDmg);
-                            addLog(`${enemy.emoji} ${enemy.name} ${t('enemyDealt')} ${enemyDmg} ${t('damage')}!`);
+                            const actualDmg = gameState.player.takeDamage(enemyDmg);
+                            addLog(`${enemy.emoji} ${enemy.name} ${t('enemyDealt')} ${actualDmg} ${t('damage')}!`);
 
                             updatePlayerHpBar();
 
