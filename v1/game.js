@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.10-221358';
+const VERSION = 'v0.1.11-070230';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -62,6 +62,8 @@ const SFX = {
     heal: [0,,0.2041,0.4429,0.3061,0.157,,,,,0.2939,0.6341,,,,,,,,1,,,,,0.5],
     // Skill use
     skill: [0,,0.2621,0.3877,0.4228,0.1633,,0.3694,,,,0.5417,0.6073,,,,,,1,,,,,0.5],
+    // Item/reward pickup - bright cheerful tone
+    pickup: [0,,0.15,,0.35,0.45,,0.15,,0.25,0.4,,0.5,0.3,,,,,,1,,,,,0.5],
 };
 
 let soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
@@ -1218,7 +1220,7 @@ function rollDice() {
     if (gameState.isRolling || gameState.currentPhase !== 'playing') return;
 
     gameState.isRolling = true;
-    playSound('diceRoll', 1.3);
+    playSound('diceRoll', 1.1);
 
     const rollBtn = document.getElementById('roll-btn');
     if (rollBtn) rollBtn.disabled = true;
@@ -2114,6 +2116,9 @@ function executeCombat() {
 }
 
 function showLootModal(providedItems = null) {
+    // Play pickup sound when loot is shown
+    playSound('pickup');
+
     // Use provided items or generate random loot
     let lootItems;
     if (providedItems) {
@@ -2545,7 +2550,7 @@ function buyItem(index) {
         return;
     }
 
-    playSound('coin'); // Play coin sound on purchase
+    // Note: coin sound already plays from spendMoney()
     logEvent(`${t('bought')} ${item.emoji} ${item.name} ${t('for')} ${item.price} ${t('coins')}!`);
 
     // Handle based on item type
@@ -2737,7 +2742,6 @@ function openSkillTrainer() {
     document.getElementById('learn-skill-btn')?.addEventListener('click', () => {
         if (gameState.player.stats.money >= price && !atMaxLevel) {
             gameState.player.stats.money -= price;
-            playSound('coin'); // Play coin sound for spending money
 
             // Assign to correct skill slot based on type
             if (isPassive) {
