@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.5-210911';
+const VERSION = 'v0.1.6-215159';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -66,12 +66,28 @@ const SFX = {
 
 let soundEnabled = true;
 
-function playSound(sfxName) {
+function playSound(sfxName, pitch = 1.0) {
     if (!soundEnabled || !window.jsfxr) return;
     try {
+        // Use Web Audio API for pitch control
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const audio = new Audio();
         audio.src = jsfxr(SFX[sfxName]);
-        audio.volume = 0.3;
+
+        // Set volume - lower for dice roll
+        audio.volume = sfxName === 'diceRoll' ? 0.15 : 0.3;
+
+        // If pitch is not 1.0, use Web Audio API for playback rate
+        if (pitch !== 1.0) {
+            const source = audioContext.createMediaElementSource(audio);
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = audio.volume;
+            source.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            audio.preservesPitch = false;
+            audio.playbackRate = pitch;
+        }
+
         audio.play().catch(() => {}); // Ignore autoplay errors
     } catch (e) {}
 }
@@ -1781,7 +1797,7 @@ function executeCombat() {
         // Enemy hurt animation
         setTimeout(() => {
             enemyCombatant.classList.add('hurt');
-            playSound('hit');
+            playSound('hit', 1.2); // Player attacks = higher pitch
             enemy.hp -= playerDmg;
 
             if (isCrit) {
@@ -1925,6 +1941,7 @@ function executeCombat() {
 
                         if (enemyDmg > 0) {
                             playerCombatant.classList.add('hurt');
+                            playSound('hit', 0.8); // Enemy attacks = lower pitch
                             const actualDmg = gameState.player.takeDamage(enemyDmg);
                             addLog(`${enemy.emoji} ${enemy.name} ${t('enemyDealt')} ${actualDmg} ${t('damage')}!`);
 
@@ -2202,6 +2219,7 @@ function showLootModal(providedItems = null) {
                             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
                         }
                         gameState.player.equippedRing = item;
+                        playSound('equip');
                         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
                     }
                     lootItems[idx] = null;
@@ -2397,6 +2415,7 @@ function buyItem(index) {
         return;
     }
 
+    playSound('coin'); // Play coin sound on purchase
     logEvent(`${t('bought')} ${item.emoji} ${item.name} ${t('for')} ${item.price} ${t('coins')}!`);
 
     // Handle based on item type
@@ -2411,6 +2430,7 @@ function buyItem(index) {
             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
         gameState.player.equippedWeapon = item;
+        playSound('equip');
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
     } else if (item.type === 'armor') {
         if (gameState.player.equippedArmor) {
@@ -2420,6 +2440,7 @@ function buyItem(index) {
             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
         gameState.player.equippedArmor = item;
+        playSound('equip');
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
     } else if (item.type === 'ring') {
         if (gameState.player.equippedRing) {
@@ -2429,6 +2450,7 @@ function buyItem(index) {
             logEvent(`${t('sold')} ${oldRing.emoji} ${oldRing.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
         gameState.player.equippedRing = item;
+        playSound('equip');
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
     }
 
@@ -2572,6 +2594,7 @@ function openSkillTrainer() {
         if (gameState.player.stats.money >= price) {
             gameState.player.stats.money -= price;
             gameState.player.equippedSkill = { type: randomSkillType, level: newLevel };
+            playSound('skill'); // Play skill sound when learning/upgrading skills
             logEvent(`⭐ ${isUpgrade ? t('upgradeSkill') : t('learnSkill')}: ${skillConfig.emoji} ${newSkillName} ${t('skillLevel')}${newLevel}`);
             updateUI();
             closeModal();
