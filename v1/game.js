@@ -61,7 +61,7 @@ function getSetMultiplier(set) {
 const BUFF_CONFIG = {
     LIFESTEAL: { type: 'attack', emoji: '🧛', minValue: 5, maxValue: 25 },
     FREEZE: { type: 'attack', emoji: '❄️', minValue: 10, maxValue: 30, duration: 1 },
-    POISON: { type: 'attack', emoji: '☠️', minValue: 5, maxValue: 25, duration: 3 },
+    POISON: { type: 'attack', emoji: '🦠', minValue: 5, maxValue: 25, duration: 3 },
     AUTO_BLOCK: { type: 'defense', emoji: '🛡️', minValue: 5, maxValue: 20 },
     REFLECT: { type: 'defense', emoji: '↩️', minValue: 10, maxValue: 50 }
 };
@@ -1098,21 +1098,20 @@ function movePlayer(steps) {
                     // Normal round progression
                     logEvent(`🎉 ${t('loopCompleted')} +${healAmount} HP, +${spAmount} SP! (${t('round')} ${gameState.round}/5)`);
 
-                    // Regenerate map on each loop completion
-                    gameState.board = generateBoard();
-                    renderBoard();
-
                     // Check for round 5 -> Supply Round
                     if (gameState.round >= 5) {
                         gameState.player.loops = 0;
                         setTimeout(() => startSupplyRound(), TIMING.bossFightDelay);
                     } else {
-                        // Increment round
+                        // Increment round and regenerate map
                         gameState.round++;
                         gameState.player.loops = 0;
+                        gameState.board = generateBoard();
                         logEvent(`📈 ${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`);
                     }
                 }
+                // Render board with new map and player position
+                renderBoard();
                 updateUI();
             }
 
