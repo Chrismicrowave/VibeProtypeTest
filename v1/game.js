@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.11-070230';
+const VERSION = 'v0.1.12-070230';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -1152,6 +1152,16 @@ function updateInventoryUI() {
     }
 }
 
+function applyEventLogOpacity() {
+    const logDiv = document.getElementById('event-log');
+    if (logDiv) {
+        Array.from(logDiv.children).forEach((entry, index) => {
+            const opacity = Math.max(0.2, Math.pow(0.8, index));
+            entry.style.opacity = opacity;
+        });
+    }
+}
+
 function logEvent(message) {
     // Store message for re-render
     gameState.eventLogMessages.unshift(message);
@@ -1182,6 +1192,9 @@ function logEvent(message) {
         while (logDiv.children.length > 8) {
             logDiv.removeChild(logDiv.lastChild);
         }
+
+        // Apply progressive opacity fade
+        applyEventLogOpacity();
     }
 }
 
@@ -1203,6 +1216,8 @@ function restoreEventLog() {
             }
             logDiv.appendChild(p);
         });
+        // Apply progressive opacity fade
+        applyEventLogOpacity();
     }
 }
 
