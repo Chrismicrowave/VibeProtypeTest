@@ -746,7 +746,6 @@ function renderBoard() {
     centerPanel.style.borderRadius = '15px';
     centerPanel.style.zIndex = '10';
     centerPanel.innerHTML = `
-        <div id="center-big-dice" style="font-size: 6em; font-weight: bold; color: #667eea; text-shadow: 0 4px 8px rgba(0,0,0,0.3); display: none; position: absolute;"></div>
         <div id="event-log" style="background: #f8f9fa; padding: 10px; border-radius: 8px; width: 100%; max-height: 180px; overflow-y: auto; font-size: 0.85em;"></div>
     `;
     boardElement.appendChild(centerPanel);
@@ -959,18 +958,10 @@ function restoreEventLog() {
     }
 }
 
-// Show result in center of board
+// Show result in event log with highlight
 function showCenterResult(text, duration = 1500) {
-    const centerDisplay = document.getElementById('center-big-dice');
-    if (centerDisplay) {
-        centerDisplay.textContent = text;
-        centerDisplay.style.display = 'block';
-        centerDisplay.style.fontSize = '3em';
-        setTimeout(() => {
-            centerDisplay.style.display = 'none';
-            centerDisplay.style.fontSize = '10em';
-        }, duration);
-    }
+    // Just log to event log
+    logEvent(text);
 }
 
 // ========================================
@@ -987,17 +978,12 @@ function rollDice() {
 
     const diceEmoji = document.getElementById('dice-emoji');
     const diceResult = document.getElementById('dice-result');
-    const centerBigDice = document.getElementById('center-big-dice');
-
-    // Show big dice in center of board
-    if (centerBigDice) centerBigDice.style.display = 'block';
 
     // Animate dice roll
     let rolls = 0;
     const rollInterval = setInterval(() => {
         const tempRoll = Math.floor(Math.random() * 6) + 1;
         if (diceResult) diceResult.textContent = tempRoll;
-        if (centerBigDice) centerBigDice.textContent = tempRoll;
         if (diceEmoji) diceEmoji.style.transform = `rotate(${rolls * 36}deg) scale(${1 + Math.sin(rolls) * 0.2})`;
         rolls++;
 
@@ -1005,14 +991,12 @@ function rollDice() {
             clearInterval(rollInterval);
             const finalRoll = Math.floor(Math.random() * 6) + 1;
             if (diceResult) diceResult.textContent = finalRoll;
-            if (centerBigDice) centerBigDice.textContent = finalRoll;
             if (diceEmoji) diceEmoji.style.transform = 'rotate(0deg) scale(1.2)';
 
             logEvent(`${t('rolled')} ${finalRoll}!`);
 
             setTimeout(() => {
                 if (diceEmoji) diceEmoji.style.transform = 'rotate(0deg) scale(1)';
-                if (centerBigDice) centerBigDice.style.display = 'none';
                 movePlayer(finalRoll);
             }, TIMING.diceResultDelay);
         }
