@@ -838,11 +838,12 @@ function updateUI() {
     if (activeSkillsList) {
         if (p.equippedSkill) {
             const config = SKILL_CONFIG[p.equippedSkill.type];
+            const skillName = t(SKILL_TRANSLATION_KEY[p.equippedSkill.type]);
             activeSkillsList.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: linear-gradient(135deg, #667eea22, #764ba222); border-radius: 8px;">
                     <span style="font-size: 1.5em;">${config.emoji}</span>
                     <div>
-                        <div style="font-weight: bold;">${config.name}</div>
+                        <div style="font-weight: bold;">${skillName}</div>
                         <div style="font-size: 0.8em; color: #666;">${t('skillLevel')}${p.equippedSkill.level} | 15 SP</div>
                     </div>
                 </div>
@@ -1117,6 +1118,23 @@ function handleTileLanding(tile) {
 // Fixed buff display order for easier comparison
 const BUFF_DISPLAY_ORDER = ['LIFESTEAL', 'FREEZE', 'POISON', 'AUTO_BLOCK', 'REFLECT'];
 
+// Map buff type to translation key
+const BUFF_TRANSLATION_KEY = {
+    'LIFESTEAL': 'lifeSteal',
+    'FREEZE': 'freeze',
+    'POISON': 'poison',
+    'AUTO_BLOCK': 'autoBlock',
+    'REFLECT': 'reflect'
+};
+
+// Map skill type to translation key
+const SKILL_TRANSLATION_KEY = {
+    'HEALING': 'skillHealing',
+    'CLONE': 'skillClone',
+    'EXPLOSION': 'skillExplosion',
+    'SHELVES': 'skillShelves'
+};
+
 function formatItemStats(item) {
     const parts = [];
 
@@ -1134,7 +1152,8 @@ function formatItemStats(item) {
             return BUFF_DISPLAY_ORDER.indexOf(a.type) - BUFF_DISPLAY_ORDER.indexOf(b.type);
         });
         sortedBuffs.forEach(buff => {
-            let text = `${buff.emoji} ${buff.type} ${buff.value}%`;
+            const buffName = t(BUFF_TRANSLATION_KEY[buff.type]) || buff.type;
+            let text = `${buff.emoji} ${buffName} ${buff.value}%`;
             if (buff.duration) text += ` (${buff.duration}t)`;
             parts.push(text);
         });
@@ -1247,7 +1266,8 @@ function showCombatModal(enemy) {
     const skill = gameState.player.equippedSkill;
     const skillConfig = skill ? SKILL_CONFIG[skill.type] : null;
     const spCost = skillConfig ? skillConfig.spCost : 0;
-    const skillBtnText = skill ? `${skillConfig.emoji} ${skillConfig.name} (${t('skillLevel')}${skill.level}) - ${spCost} SP` : t('noSkillEquipped');
+    const skillName = skill ? t(SKILL_TRANSLATION_KEY[skill.type]) : '';
+    const skillBtnText = skill ? `${skillConfig.emoji} ${skillName} (${t('skillLevel')}${skill.level}) - ${spCost} SP` : t('noSkillEquipped');
     const skillBtnDisabled = !skill || gameState.player.stats.sp < spCost;
 
     content.innerHTML = `
@@ -2220,6 +2240,7 @@ function openSkillTrainer() {
     const skillTypes = Object.keys(SKILL_CONFIG);
     const randomSkillType = skillTypes[Math.floor(Math.random() * skillTypes.length)];
     const skillConfig = SKILL_CONFIG[randomSkillType];
+    const newSkillName = t(SKILL_TRANSLATION_KEY[randomSkillType]);
 
     // Calculate price (increases with level)
     const currentSkill = gameState.player.equippedSkill;
@@ -2250,6 +2271,7 @@ function openSkillTrainer() {
     let currentSkillHTML = '';
     if (currentSkill) {
         const currentConfig = SKILL_CONFIG[currentSkill.type];
+        const currentSkillName = t(SKILL_TRANSLATION_KEY[currentSkill.type]);
         // Calculate current skill value
         let currentSkillValue = '';
         switch (currentSkill.type) {
@@ -2270,7 +2292,7 @@ function openSkillTrainer() {
             <div style="flex: 1; text-align: center; background: #fff3cd; padding: 15px; border-radius: 8px; border: 2px solid #ffc107;">
                 <div style="font-size: 0.8em; color: #856404; font-weight: bold; margin-bottom: 5px;">${t('currentSkill')}</div>
                 <div style="font-size: 3em; margin-bottom: 5px;">${currentConfig.emoji}</div>
-                <div style="font-weight: bold; color: #2c3e50;">${currentConfig.name} - ${currentSkillValue}</div>
+                <div style="font-weight: bold; color: #2c3e50;">${currentSkillName} - ${currentSkillValue}</div>
                 <div style="color: #666; font-size: 0.85em;">${t('skillLevel')}${currentSkill.level}</div>
             </div>
             <div style="display: flex; align-items: center; font-size: 2em; color: #667eea;">➡️</div>
@@ -2286,7 +2308,7 @@ function openSkillTrainer() {
             <div style="flex: 1; text-align: center; background: #d1ecf1; padding: 15px; border-radius: 8px; border: 2px solid #17a2b8; max-width: 200px;">
                 <div style="font-size: 0.8em; color: #0c5460; font-weight: bold; margin-bottom: 5px;">${isUpgrade ? t('upgradeSkill') : t('newSkill')}</div>
                 <div style="font-size: 3em; margin-bottom: 5px;">${skillConfig.emoji}</div>
-                <div style="font-weight: bold; color: #2c3e50;">${skillConfig.name} - ${skillValue}</div>
+                <div style="font-weight: bold; color: #2c3e50;">${newSkillName} - ${skillValue}</div>
                 <div style="color: #666; font-size: 0.85em;">${t('skillLevel')}${newLevel}</div>
                 <div style="color: #e74c3c; font-weight: bold; margin-top: 5px;">💰 ${price}</div>
             </div>
@@ -2319,7 +2341,7 @@ function openSkillTrainer() {
         if (gameState.player.stats.money >= price) {
             gameState.player.stats.money -= price;
             gameState.player.equippedSkill = { type: randomSkillType, level: newLevel };
-            logEvent(`⭐ ${isUpgrade ? t('upgradeSkill') : t('learnSkill')}: ${skillConfig.emoji} ${skillConfig.name} ${t('skillLevel')}${newLevel}`);
+            logEvent(`⭐ ${isUpgrade ? t('upgradeSkill') : t('learnSkill')}: ${skillConfig.emoji} ${newSkillName} ${t('skillLevel')}${newLevel}`);
             updateUI();
             closeModal();
             gameState.currentPhase = 'playing';
