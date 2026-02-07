@@ -96,6 +96,18 @@ const TRANSLATIONS = {
         for: 'for',
         bought: 'Bought',
         notEnoughMoney: 'Not enough money!',
+        criticalHit: 'Critical Hit!',
+        lifeSteal: 'Life Steal',
+        freeze: 'Freeze',
+        poison: 'Poison',
+        autoBlock: 'Auto Block',
+        reflect: 'Reflect',
+        frozen: 'is frozen!',
+        frozenSkip: 'Enemy is frozen and skips turn!',
+        poisoned: 'is poisoned!',
+        poisonDamage: 'Poison deals',
+        blocked: 'Blocked all damage!',
+        reflected: 'Reflected',
         shop: 'Shop',
         yourMoney: 'Your Money',
         leaveShop: 'Leave Shop',
@@ -195,6 +207,18 @@ const TRANSLATIONS = {
         for: '，获得',
         bought: '购买了',
         notEnoughMoney: '金币不足！',
+        criticalHit: '暴击！',
+        lifeSteal: '吸血',
+        freeze: '冰冻',
+        poison: '中毒',
+        autoBlock: '格挡',
+        reflect: '反伤',
+        frozen: '被冰冻了！',
+        frozenSkip: '敌人冰冻，跳过回合！',
+        poisoned: '中毒了！',
+        poisonDamage: '毒素造成',
+        blocked: '格挡了所有伤害！',
+        reflected: '反弹了',
         shop: '商店',
         yourMoney: '你的金币',
         leaveShop: '离开商店',
@@ -1138,7 +1162,7 @@ function executeCombat() {
             enemy.hp -= playerDmg;
 
             if (isCrit) {
-                addLog(`⚡ Critical Hit!`);
+                addLog(`⚡ ${t('criticalHit')}`);
             }
             addLog(`🤺 ${t('dealtDamage')} ${playerDmg} ${t('damage')}!`);
 
@@ -1154,12 +1178,12 @@ function executeCombat() {
                 if (buff.type === 'LIFESTEAL') {
                     const heal = Math.floor(playerDmg * buff.value / 100);
                     gameState.player.heal(heal);
-                    addLog(`🧛 Life Steal +${heal} HP!`);
+                    addLog(`🧛 ${t('lifeSteal')} +${heal} HP!`);
                     updatePlayerHpBar();
                 } else if (buff.type === 'FREEZE') {
                     if (!gameState.combatState.enemyFrozen && Math.random() * 100 < buff.value) {
                         gameState.combatState.enemyFrozen = true;
-                        addLog(`❄️ Enemy frozen!`);
+                        addLog(`❄️ ${enemy.name} ${t('frozen')}`);
                     }
                 } else if (buff.type === 'POISON') {
                     if (!gameState.combatState.enemyPoison.active && Math.random() * 100 < buff.value) {
@@ -1168,7 +1192,7 @@ function executeCombat() {
                             percent: buff.value,
                             turnsLeft: 3
                         };
-                        addLog(`☠️ Enemy poisoned!`);
+                        addLog(`☠️ ${enemy.name} ${t('poisoned')}`);
                     }
                 }
             }
@@ -1184,7 +1208,7 @@ function executeCombat() {
             setTimeout(() => {
                 // Check if enemy is frozen
                 if (gameState.combatState.enemyFrozen) {
-                    addLog(`❄️ Enemy is frozen!`);
+                    addLog(`❄️ ${t('frozenSkip')}`);
                     gameState.combatState.enemyFrozen = false;
                     return; // Skip enemy turn
                 }
@@ -1194,7 +1218,7 @@ function executeCombat() {
                     const poisonDmg = Math.floor(enemy.maxHp * gameState.combatState.enemyPoison.percent / 100);
                     enemy.hp -= poisonDmg;
                     gameState.combatState.enemyPoison.turnsLeft--;
-                    addLog(`☠️ Poison deals ${poisonDmg}!`);
+                    addLog(`☠️ ${t('poisonDamage')} ${poisonDmg} ${t('damage')}!`);
                     updateEnemyHpBar();
 
                     // Check if poison expired
@@ -1230,7 +1254,7 @@ function executeCombat() {
                     if (buff.type === 'AUTO_BLOCK') {
                         if (Math.random() * 100 < buff.value) {
                             blocked = true;
-                            addLog(`🛡️ Blocked!`);
+                            addLog(`🛡️ ${t('blocked')}`);
                             break;
                         }
                     } else if (buff.type === 'REFLECT') {
@@ -1250,7 +1274,7 @@ function executeCombat() {
                         // Apply reflect damage to enemy
                         if (reflectDmg > 0) {
                             enemy.hp -= reflectDmg;
-                            addLog(`↩️ Reflected ${reflectDmg}!`);
+                            addLog(`↩️ ${t('reflected')} ${reflectDmg} ${t('damage')}!`);
                             updateEnemyHpBar();
 
                             // Check for enemy death after reflect
