@@ -1085,6 +1085,10 @@ function movePlayer(steps) {
                     // Normal round progression
                     logEvent(`🎉 ${t('loopCompleted')} +${healAmount} HP, +${spAmount} SP! (${t('round')} ${gameState.round}/5)`);
 
+                    // Regenerate map on each loop completion
+                    gameState.board = generateBoard();
+                    renderBoard();
+
                     // Check for round 5 -> Supply Round
                     if (gameState.round >= 5) {
                         gameState.player.loops = 0;
@@ -1094,9 +1098,6 @@ function movePlayer(steps) {
                         gameState.round++;
                         gameState.player.loops = 0;
                         logEvent(`📈 ${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`);
-                        // Regenerate map for new round
-                        gameState.board = generateBoard();
-                        renderBoard();
                     }
                 }
                 updateUI();
