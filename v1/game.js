@@ -942,6 +942,20 @@ function logEvent(message) {
     }
 }
 
+// Show result in center of board
+function showCenterResult(text, duration = 1500) {
+    const centerDisplay = document.getElementById('center-big-dice');
+    if (centerDisplay) {
+        centerDisplay.textContent = text;
+        centerDisplay.style.display = 'block';
+        centerDisplay.style.fontSize = '3em';
+        setTimeout(() => {
+            centerDisplay.style.display = 'none';
+            centerDisplay.style.fontSize = '10em';
+        }, duration);
+    }
+}
+
 // ========================================
 // GAME ACTIONS
 // ========================================
@@ -1077,16 +1091,20 @@ function movePlayer(steps) {
 function handleTileLanding(tile) {
     switch(tile.type) {
         case TILE_TYPES.SHOP:
-            openShop();
+            showCenterResult('🏪 ' + t('shop'), 1000);
+            setTimeout(() => openShop(), 800);
             break;
         case TILE_TYPES.COMBAT:
-            startCombat();
+            showCenterResult('⚔️ ' + t('combatStart').split(' ')[0], 1000);
+            setTimeout(() => startCombat(), 800);
             break;
         case TILE_TYPES.TREASURE:
-            openTreasure();
+            showCenterResult('🎁 ' + t('treasure'), 1000);
+            setTimeout(() => openTreasure(), 800);
             break;
         case TILE_TYPES.SKILL_TRAINER:
-            openSkillTrainer();
+            showCenterResult('⭐ ' + t('skillTrainer'), 1000);
+            setTimeout(() => openSkillTrainer(), 800);
             break;
         case TILE_TYPES.EMPTY:
             // Use round/set scaling for empty tile gold
@@ -1095,6 +1113,7 @@ function handleTileLanding(tile) {
             const coins = Math.floor((3 + Math.random() * 7) * roundScale.gold * setMult);
             gameState.player.gainMoney(coins);
             logEvent(`${t('foundCoins')} ${coins} ${t('coins')}! 💰`);
+            showCenterResult(`💰 +${coins}`);
             break;
     }
 }
