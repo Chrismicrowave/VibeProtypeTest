@@ -612,7 +612,7 @@ class Item {
         this.special = special;
         this.buffs = [];  // Array for combat buffs
         this.price = price;
-        this.sellValue = Math.floor(price * 0.6);
+        this.sellValue = Math.floor(price * 0.1);
     }
 }
 
@@ -1849,7 +1849,7 @@ function showLootModal(providedItems = null) {
         let itemsHTML = lootItems.map((item, idx) => {
             if (!item) return ''; // Item was taken
 
-            const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
+            const sellPrice = item.sellValue || Math.floor(item.price * 0.1);
             const currentEquipped = getCurrentEquippedItem(item.type);
 
             // For potions - Use now or Add to inventory
@@ -1885,7 +1885,7 @@ function showLootModal(providedItems = null) {
                                 <div style="font-size: 2em; margin-bottom: 5px;">${hasEquipped ? currentEquipped.emoji : '❌'}</div>
                                 <div style="font-weight: bold; font-size: 0.85em; color: #2c3e50;">${hasEquipped ? currentEquipped.name : t('none')}</div>
                                 ${hasEquipped ? `<div style="color: #666; font-size: 0.75em; margin-top: 5px;">${formatItemStats(currentEquipped)}</div>` : ''}
-                                ${hasEquipped ? `<div style="color: #f39c12; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${currentEquipped.sellValue || Math.floor(currentEquipped.price * 0.6)}</div>` : ''}
+                                ${hasEquipped ? `<div style="color: #f39c12; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${currentEquipped.sellValue || Math.floor(currentEquipped.price * 0.1)}</div>` : ''}
                             </div>
                             <!-- Arrow -->
                             <div style="display: flex; align-items: center; font-size: 2em; color: #667eea;">➡️</div>
@@ -1923,7 +1923,7 @@ function showLootModal(providedItems = null) {
                                 <div style="font-size: 2em; margin-bottom: 5px;">${currentRing ? currentRing.emoji : '❌'}</div>
                                 <div style="font-weight: bold; font-size: 0.85em; color: #2c3e50;">${currentRing ? currentRing.name : t('none')}</div>
                                 ${currentRing ? `<div style="color: #666; font-size: 0.75em; margin-top: 5px;">${formatItemStats(currentRing)}</div>` : ''}
-                                ${currentRing ? `<div style="color: #f39c12; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${currentRing.sellValue || Math.floor(currentRing.price * 0.6)}</div>` : ''}
+                                ${currentRing ? `<div style="color: #f39c12; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${currentRing.sellValue || Math.floor(currentRing.price * 0.1)}</div>` : ''}
                             </div>
                             <!-- Arrow -->
                             <div style="display: flex; align-items: center; font-size: 2em; color: #f39c12;">➡️</div>
@@ -2010,7 +2010,7 @@ function showLootModal(providedItems = null) {
                     if (item.type === 'weapon') {
                         if (gameState.player.equippedWeapon) {
                             const oldItem = gameState.player.equippedWeapon;
-                            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.6);
+                            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.1);
                             gameState.player.gainMoney(oldSellPrice);
                             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
                         }
@@ -2019,7 +2019,7 @@ function showLootModal(providedItems = null) {
                     } else if (item.type === 'armor') {
                         if (gameState.player.equippedArmor) {
                             const oldItem = gameState.player.equippedArmor;
-                            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.6);
+                            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.1);
                             gameState.player.gainMoney(oldSellPrice);
                             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
                         }
@@ -2028,7 +2028,7 @@ function showLootModal(providedItems = null) {
                     } else if (item.type === 'ring') {
                         if (gameState.player.equippedRing) {
                             const oldItem = gameState.player.equippedRing;
-                            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.6);
+                            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.1);
                             gameState.player.gainMoney(oldSellPrice);
                             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
                         }
@@ -2046,7 +2046,7 @@ function showLootModal(providedItems = null) {
             const sellBtn = content.querySelector(`.loot-sell-btn-${idx}`);
             if (sellBtn) {
                 sellBtn.addEventListener('click', () => {
-                    const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
+                    const sellPrice = item.sellValue || Math.floor(item.price * 0.1);
                     gameState.player.gainMoney(sellPrice);
                     logEvent(`${t('sold')} ${item.emoji} ${item.name} ${t('for')} ${sellPrice} ${t('coins')}`);
                     lootItems[idx] = null;
@@ -2069,13 +2069,13 @@ function showLootModal(providedItems = null) {
                             logEvent(`${t('addedToInventory')} ${item.emoji} ${item.name}`);
                         } else {
                             // Auto-sell if potion limit reached
-                            const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
+                            const sellPrice = item.sellValue || Math.floor(item.price * 0.1);
                             gameState.player.gainMoney(sellPrice);
                             logEvent(`${t('potionFullSold')} ${sellPrice} ${t('coins')}`);
                         }
                     } else if (item) {
                         // Auto-sell unclaimed equipment
-                        const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
+                        const sellPrice = item.sellValue || Math.floor(item.price * 0.1);
                         gameState.player.gainMoney(sellPrice);
                         logEvent(`${t('sold')} ${item.emoji} ${item.name} ${t('for')} ${sellPrice} ${t('coins')}`);
                     }
@@ -2153,7 +2153,7 @@ function openShop() {
                             <div style="font-size: 2em; margin-bottom: 5px;">${currentEquipped ? currentEquipped.emoji : '❌'}</div>
                             <div style="font-weight: bold; font-size: 0.85em; color: #2c3e50;">${currentEquipped ? currentEquipped.name : t('none')}</div>
                             ${currentEquipped ? `<div style="color: #666; font-size: 0.75em; margin-top: 5px;">${formatItemStats(currentEquipped)}</div>` : ''}
-                            ${currentEquipped ? `<div style="color: #f39c12; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${currentEquipped.sellValue || Math.floor(currentEquipped.price * 0.6)}</div>` : ''}
+                            ${currentEquipped ? `<div style="color: #f39c12; font-weight: bold; font-size: 0.85em; margin-top: 5px;">💰 ${currentEquipped.sellValue || Math.floor(currentEquipped.price * 0.1)}</div>` : ''}
                         </div>
                         <!-- Arrow -->
                         <div style="display: flex; align-items: center; font-size: 2em; color: ${borderColor};">➡️</div>
@@ -2232,7 +2232,7 @@ function buyItem(index) {
     } else if (item.type === 'weapon') {
         if (gameState.player.equippedWeapon) {
             const oldItem = gameState.player.equippedWeapon;
-            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.6);
+            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.1);
             gameState.player.gainMoney(oldSellPrice);
             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
@@ -2241,7 +2241,7 @@ function buyItem(index) {
     } else if (item.type === 'armor') {
         if (gameState.player.equippedArmor) {
             const oldItem = gameState.player.equippedArmor;
-            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.6);
+            const oldSellPrice = oldItem.sellValue || Math.floor(oldItem.price * 0.1);
             gameState.player.gainMoney(oldSellPrice);
             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
@@ -2250,7 +2250,7 @@ function buyItem(index) {
     } else if (item.type === 'ring') {
         if (gameState.player.equippedRing) {
             const oldRing = gameState.player.equippedRing;
-            const oldSellPrice = oldRing.sellValue || Math.floor(oldRing.price * 0.6);
+            const oldSellPrice = oldRing.sellValue || Math.floor(oldRing.price * 0.1);
             gameState.player.gainMoney(oldSellPrice);
             logEvent(`${t('sold')} ${oldRing.emoji} ${oldRing.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
@@ -2553,7 +2553,7 @@ function sellItem(index) {
     const item = gameState.player.inventory[index];
     if (!item) return;
 
-    const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
+    const sellPrice = item.sellValue || Math.floor(item.price * 0.1);
     gameState.player.gainMoney(sellPrice);
     gameState.player.inventory.splice(index, 1);
     logEvent(`${t('sold')} ${item.emoji} ${item.name} ${t('for')} ${sellPrice} ${t('coins')}!`);
