@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.3-204420';
+const VERSION = 'v0.1.3-204624';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -445,7 +445,7 @@ function switchLanguage() {
 }
 
 function updateLanguageUI() {
-    document.querySelector('header h1').textContent = `🎲 ${t('title')} ${VERSION}`;
+    document.querySelector('header h1').innerHTML = `🎲 ${t('title')} <span style="font-size: 0.5em; color: #999; font-weight: normal;">${VERSION}</span>`;
     const roundDisplay = gameState.isSupplyRound ? t('supplyRound') : `${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`;
     document.getElementById('game-info').innerHTML = `
         <span>${t('level')}: <span id="level-display">${gameState.level}</span></span>
