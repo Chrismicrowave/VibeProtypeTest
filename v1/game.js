@@ -1571,6 +1571,7 @@ function showLootModal(providedItems = null) {
         }
     }
 
+    modal.classList.remove('hidden');
     renderLootUI();
 }
 
