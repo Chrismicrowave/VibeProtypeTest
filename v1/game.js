@@ -57,14 +57,25 @@ function getSetMultiplier(set) {
     return 1 + (set - 1) * 0.5;
 }
 
-// Buff Configuration
+// Buff Configuration - values scale with progression
+// Early game gets ~20-30% of max, late game reaches full values
 const BUFF_CONFIG = {
-    LIFESTEAL: { type: 'attack', emoji: '🧛', minValue: 5, maxValue: 25 },
-    FREEZE: { type: 'attack', emoji: '❄️', minValue: 10, maxValue: 30, duration: 1 },
-    POISON: { type: 'attack', emoji: '🦠', minValue: 5, maxValue: 25, duration: 3 },
-    AUTO_BLOCK: { type: 'defense', emoji: '🛡️', minValue: 5, maxValue: 20 },
-    REFLECT: { type: 'defense', emoji: '↩️', minValue: 10, maxValue: 50 }
+    LIFESTEAL: { type: 'attack', emoji: '🧛', minValue: 3, maxValue: 20 },
+    FREEZE: { type: 'attack', emoji: '❄️', minValue: 5, maxValue: 25, duration: 1 },
+    POISON: { type: 'attack', emoji: '🦠', minValue: 3, maxValue: 20, duration: 3 },
+    AUTO_BLOCK: { type: 'defense', emoji: '🛡️', minValue: 3, maxValue: 15 },
+    REFLECT: { type: 'defense', emoji: '↩️', minValue: 5, maxValue: 35 }
 };
+
+// Buff scaling by round (percentage of max value available)
+const BUFF_ROUND_SCALING = {
+    1: 0.25,  // Round 1: 25% of max buff values
+    2: 0.40,  // Round 2: 40%
+    3: 0.55,  // Round 3: 55%
+    4: 0.70,  // Round 4: 70%
+    5: 0.85   // Round 5: 85%
+};
+// Set adds +15% per set (Set 2 = +15%, Set 3 = +30%, etc.)
 
 // Item buff rules: which buffs allowed per item type
 const ITEM_BUFF_RULES = {
@@ -149,6 +160,7 @@ const TRANSLATIONS = {
         landedOn: 'Landed on',
         tile: 'tile',
         loopCompleted: 'Loop completed! Bonus +25 coins',
+        setBonus: 'Set Complete Bonus',
         foundCoins: 'Found',
         coins: 'coins',
         combatStart: 'Combat started against',
@@ -294,6 +306,7 @@ const TRANSLATIONS = {
         landedOn: '降落在',
         tile: '格子',
         loopCompleted: '完成一圈！奖励 +25 金币',
+        setBonus: '阶段完成奖励',
         foundCoins: '发现了',
         coins: '金币',
         combatStart: '战斗开始，对手是',
@@ -625,16 +638,28 @@ function generateItemBuffs(itemType, levelScale = 1) {
     if (!rules || rules.maxBuffs === 0) return [];
 
     const buffs = [];
-    const numBuffs = Math.floor(Math.random() * (rules.maxBuffs + 1)); // 0 to maxBuffs
     const availableBuffs = [...rules.allowed];
+
+    // Calculate progression-based buff cap
+    const roundScale = BUFF_ROUND_SCALING[gameState.round] || BUFF_ROUND_SCALING[5];
+    const setBonus = (gameState.set - 1) * 0.15; // +15% per set after first
+    const progressionCap = Math.min(1.0, roundScale + setBonus); // Cap at 100%
+
+    // Scale max buffs with progression: R1=0-1, R2-3=0-2, R4-5+=0-3
+    const maxBuffsForRound = gameState.round <= 1 ? 1 : (gameState.round <= 3 ? 2 : rules.maxBuffs);
+    const numBuffs = Math.floor(Math.random() * (maxBuffsForRound + 1));
 
     for (let i = 0; i < numBuffs && availableBuffs.length > 0; i++) {
         const buffIndex = Math.floor(Math.random() * availableBuffs.length);
         const buffType = availableBuffs.splice(buffIndex, 1)[0];
         const config = BUFF_CONFIG[buffType];
 
-        const baseValue = config.minValue + Math.random() * (config.maxValue - config.minValue);
-        const scaledValue = Math.min(config.maxValue * DIFFICULTY, Math.floor(baseValue * (0.8 + levelScale * 0.2) * DIFFICULTY));
+        // Calculate max available value for current progression
+        const maxAvailable = config.minValue + (config.maxValue - config.minValue) * progressionCap;
+
+        // Random value between min and max available
+        const baseValue = config.minValue + Math.random() * (maxAvailable - config.minValue);
+        const scaledValue = Math.floor(baseValue * DIFFICULTY);
 
         buffs.push({
             type: buffType,
@@ -1092,7 +1117,19 @@ function movePlayer(steps) {
 
                 // Check if this is a Supply Round loop completion
                 if (gameState.isSupplyRound) {
-                    // Supply Round completed - go to next set
+                    // Supply Round completed - grant permanent stat boost (15%)
+                    const boost = 0.15;
+                    gameState.player.stats.maxHp = Math.floor(gameState.player.stats.maxHp * (1 + boost));
+                    gameState.player.stats.maxSp = Math.floor(gameState.player.stats.maxSp * (1 + boost));
+                    gameState.player.stats.atk = Math.floor(gameState.player.stats.atk * (1 + boost));
+                    gameState.player.stats.def = Math.floor(gameState.player.stats.def * (1 + boost));
+                    // Full heal with new max values
+                    gameState.player.stats.hp = gameState.player.stats.maxHp;
+                    gameState.player.stats.sp = gameState.player.stats.maxSp;
+
+                    logEvent(`💪 ${t('setBonus')}: +15% ATK/DEF/HP/SP!`);
+
+                    // Go to next set
                     gameState.isSupplyRound = false;
                     gameState.set++;
                     gameState.round = 1;
