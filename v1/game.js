@@ -454,7 +454,7 @@ function updateLanguageUI() {
     if (passiveEmpty) passiveEmpty.textContent = t('noPassiveSkills');
 
     // Update roll button
-    const centerRollBtn = document.getElementById('center-roll-btn');
+    const centerRollBtn = document.getElementById('roll-btn');
     if (centerRollBtn) centerRollBtn.innerHTML = `🎲 ${t('rollDice')}`;
 }
 
@@ -731,7 +731,7 @@ function renderBoard() {
     const boardElement = document.getElementById('game-board');
     boardElement.innerHTML = '';
 
-    // Add center action panel
+    // Add center panel (for large dice display during roll)
     const centerPanel = document.createElement('div');
     centerPanel.id = 'board-center';
     centerPanel.style.gridRow = '2 / 9';
@@ -739,20 +739,11 @@ function renderBoard() {
     centerPanel.style.display = 'flex';
     centerPanel.style.flexDirection = 'column';
     centerPanel.style.alignItems = 'center';
-    centerPanel.style.justifyContent = 'flex-start';
-    centerPanel.style.padding = '10px 20px';
-    centerPanel.style.background = 'rgba(255, 255, 255, 0.95)';
+    centerPanel.style.justifyContent = 'center';
+    centerPanel.style.background = 'rgba(255, 255, 255, 0.9)';
     centerPanel.style.borderRadius = '15px';
-    centerPanel.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
     centerPanel.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 5px;">
-            <div id="center-dice-number" style="font-size: 3.5em; font-weight: bold; color: #667eea; text-shadow: 0 2px 4px rgba(0,0,0,0.3); min-height: 1em; display: flex; align-items: center; justify-content: center;"></div>
-            <div id="center-dice" style="font-size: 3.5em; margin-top: -15px;">🎲</div>
-        </div>
-        <button id="center-roll-btn" class="action-btn" style="width: 100%; max-width: 200px; margin-bottom: 8px;">🎲 ${t('rollDice')}</button>
-        <div id="center-event-log" style="background: #f8f9fa; padding: 8px; border-radius: 8px; width: 100%; max-height: 150px; overflow-y: auto; font-size: 0.85em;">
-            <p>${t('welcome')}</p>
-        </div>
+        <div id="center-big-dice" style="font-size: 8em; display: none;">🎲</div>
     `;
     boardElement.appendChild(centerPanel);
 
@@ -924,7 +915,7 @@ function updateInventoryUI() {
 
 function logEvent(message) {
     // Log to center board log
-    const centerLog = document.getElementById('center-event-log');
+    const centerLog = document.getElementById('event-log');
     if (centerLog) {
         const p = document.createElement('p');
         p.textContent = message;
@@ -962,45 +953,37 @@ function rollDice() {
 
     gameState.isRolling = true;
 
-    const rollBtn = document.getElementById('roll-dice-btn');
+    const rollBtn = document.getElementById('roll-btn');
     if (rollBtn) rollBtn.disabled = true;
 
-    const centerRollBtn = document.getElementById('center-roll-btn');
-    if (centerRollBtn) centerRollBtn.disabled = true;
+    const diceEmoji = document.getElementById('dice-emoji');
+    const diceResult = document.getElementById('dice-result');
+    const centerBigDice = document.getElementById('center-big-dice');
 
-    const centerDice = document.getElementById('center-dice');
-    const centerDiceNumber = document.getElementById('center-dice-number');
+    // Show big dice in center of board
+    if (centerBigDice) centerBigDice.style.display = 'block';
 
     // Animate dice roll
     let rolls = 0;
     const rollInterval = setInterval(() => {
         const tempRoll = Math.floor(Math.random() * 6) + 1;
-        centerDice.textContent = '🎲';
-        if (centerDiceNumber) centerDiceNumber.textContent = tempRoll;
-        centerDice.style.transform = `rotate(${rolls * 36}deg) scale(${1 + Math.sin(rolls) * 0.2})`;
+        if (diceResult) diceResult.textContent = tempRoll;
+        if (centerBigDice) centerBigDice.textContent = tempRoll;
+        if (diceEmoji) diceEmoji.style.transform = `rotate(${rolls * 36}deg) scale(${1 + Math.sin(rolls) * 0.2})`;
         rolls++;
 
         if (rolls >= 15) {
             clearInterval(rollInterval);
             const finalRoll = Math.floor(Math.random() * 6) + 1;
-            centerDice.textContent = '🎲';
-            if (centerDiceNumber) {
-                centerDiceNumber.textContent = finalRoll;
-                centerDiceNumber.style.fontSize = '5em';
-            }
-            centerDice.style.transform = 'rotate(0deg) scale(1.2)';
-
-            const diceResult = document.getElementById('dice-result');
-            if (diceResult) diceResult.textContent = '🎲 ' + finalRoll;
+            if (diceResult) diceResult.textContent = finalRoll;
+            if (centerBigDice) centerBigDice.textContent = finalRoll;
+            if (diceEmoji) diceEmoji.style.transform = 'rotate(0deg) scale(1.2)';
 
             logEvent(`${t('rolled')} ${finalRoll}!`);
 
             setTimeout(() => {
-                centerDice.style.transform = 'rotate(0deg) scale(1)';
-                if (centerDiceNumber) {
-                    centerDiceNumber.textContent = '';
-                    centerDiceNumber.style.fontSize = '4em';
-                }
+                if (diceEmoji) diceEmoji.style.transform = 'rotate(0deg) scale(1)';
+                if (centerBigDice) centerBigDice.style.display = 'none';
                 movePlayer(finalRoll);
             }, TIMING.diceResultDelay);
         }
@@ -1019,10 +1002,10 @@ function movePlayer(steps) {
             renderBoard();
 
             // Re-attach event listener to center button after re-render
-            const centerRollBtn = document.getElementById('center-roll-btn');
+            const centerRollBtn = document.getElementById('roll-btn');
             if (centerRollBtn) {
                 centerRollBtn.replaceWith(centerRollBtn.cloneNode(true));
-                document.getElementById('center-roll-btn').addEventListener('click', rollDice);
+                document.getElementById('roll-btn').addEventListener('click', rollDice);
             }
         } else {
             clearInterval(moveInterval);
@@ -1061,6 +1044,9 @@ function movePlayer(steps) {
                         gameState.round++;
                         gameState.player.loops = 0;
                         logEvent(`📈 ${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`);
+                        // Regenerate map for new round
+                        gameState.board = generateBoard();
+                        renderBoard();
                     }
                 }
                 updateUI();
@@ -1070,7 +1056,7 @@ function movePlayer(steps) {
             logEvent(`${t('landedOn')} ${tile.emoji} ${tile.type} ${t('tile')}!`);
 
             // Reset center display
-            const centerDice = document.getElementById('center-dice');
+            const centerDice = document.getElementById('dice-emoji');
             if (centerDice) {
                 centerDice.textContent = '🎲';
                 centerDice.style.transform = 'scale(1)';
@@ -1083,7 +1069,7 @@ function movePlayer(steps) {
                 const rollBtn = document.getElementById('roll-dice-btn');
                 if (rollBtn) rollBtn.disabled = false;
 
-                const centerRollBtn = document.getElementById('center-roll-btn');
+                const centerRollBtn = document.getElementById('roll-btn');
                 if (centerRollBtn) centerRollBtn.disabled = false;
             }, TIMING.tileLandingDelay);
         }
@@ -2438,7 +2424,7 @@ function startSupplyRound() {
         updateUI();
 
         // Re-attach event listener to center button after re-render
-        const centerRollBtn = document.getElementById('center-roll-btn');
+        const centerRollBtn = document.getElementById('roll-btn');
         if (centerRollBtn) {
             centerRollBtn.addEventListener('click', rollDice);
         }
@@ -2602,7 +2588,7 @@ function restartGame() {
     updateInventoryUI();
 
     // Re-attach event listener to center button after re-render
-    const centerRollBtn = document.getElementById('center-roll-btn');
+    const centerRollBtn = document.getElementById('roll-btn');
     if (centerRollBtn) {
         centerRollBtn.addEventListener('click', rollDice);
     }
@@ -2636,7 +2622,7 @@ function initGame() {
     const rollBtn = document.getElementById('roll-dice-btn');
     if (rollBtn) rollBtn.addEventListener('click', rollDice);
 
-    const centerRollBtn = document.getElementById('center-roll-btn');
+    const centerRollBtn = document.getElementById('roll-btn');
     if (centerRollBtn) centerRollBtn.addEventListener('click', rollDice);
 
     // Close modal on overlay click

@@ -46,9 +46,22 @@ header h1 {
 /* Main Layout */
 main {
     display: grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr 200px 380px;
     gap: 20px;
     margin-bottom: 20px;
+}
+
+/* Dice Panel */
+#dice-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
 }
 
 /* Panel Styles */
@@ -739,7 +752,7 @@ main {
 /* Responsive */
 @media (max-width: 1200px) {
     main {
-        grid-template-columns: 1fr 320px;
+        grid-template-columns: 1fr 180px 320px;
     }
 
     #right-panel {
@@ -751,6 +764,20 @@ main {
     main {
         grid-template-columns: 1fr;
     }
+
+    #dice-panel {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 10px;
+        gap: 15px;
+    }
+
+    #dice-panel #event-log {
+        width: 100%;
+        max-height: 80px;
+    }
+}
 
     #right-panel {
         max-height: none;
