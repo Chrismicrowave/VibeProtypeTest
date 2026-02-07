@@ -112,6 +112,7 @@ const SKILL_CONFIG = {
 };
 
 const SKILL_TRAINER_PRICE = 100; // Base price to learn skill
+const MAX_POTIONS = 3; // Max HP potions and SP potions each
 
 // Language System
 let currentLanguage = localStorage.getItem('gameLanguage') || 'en';
@@ -220,7 +221,7 @@ const TRANSLATIONS = {
         equip: 'Equip',
         use: 'Use',
         sell: 'Sell',
-        continueAdventure: 'Continue Adventure',
+        continueAdventure: 'Sell All Items & Continue',
         allItemsCollected: 'All items collected!',
         addedToInventory: 'Added',
         toInventory: 'to inventory',
@@ -252,7 +253,10 @@ const TRANSLATIONS = {
         replace: 'Replace',
         buy: 'Buy',
         shopItem: 'Shop Item',
-        buyAndReplace: 'Buy & Replace'
+        buyAndReplace: 'Buy & Replace',
+        hpPotion: 'HP Potion',
+        spPotion: 'SP Potion',
+        potionFullSold: 'Potion full, sold for'
     },
     zh: {
         title: 'Vibing骰子游戏',
@@ -357,7 +361,7 @@ const TRANSLATIONS = {
         equip: '装备',
         use: '使用',
         sell: '出售',
-        continueAdventure: '继续冒险',
+        continueAdventure: '卖掉所有物品并继续',
         allItemsCollected: '所有物品已收集！',
         addedToInventory: '添加了',
         toInventory: '到背包',
@@ -389,7 +393,10 @@ const TRANSLATIONS = {
         replace: '替换',
         buy: '购买',
         shopItem: '商品',
-        buyAndReplace: '购买并替换'
+        buyAndReplace: '购买并替换',
+        hpPotion: '生命药水',
+        spPotion: '魔法药水',
+        potionFullSold: '药水已满，卖出获得'
     }
 };
 
@@ -554,6 +561,19 @@ class Player {
         updateInventoryUI();
     }
 
+    countPotionsByType(statType) {
+        return this.inventory.filter(item =>
+            item.type === 'potion' && item.stats[statType]
+        ).length;
+    }
+
+    canAddPotion(item) {
+        if (item.type !== 'potion') return true;
+        if (item.stats.hp && this.countPotionsByType('hp') >= MAX_POTIONS) return false;
+        if (item.stats.sp && this.countPotionsByType('sp') >= MAX_POTIONS) return false;
+        return true;
+    }
+
     getTotalAtk() {
         let atk = this.stats.atk;
         if (this.equippedWeapon) atk += this.equippedWeapon.stats.atk || 0;
@@ -715,18 +735,18 @@ function renderBoard() {
     centerPanel.style.display = 'flex';
     centerPanel.style.flexDirection = 'column';
     centerPanel.style.alignItems = 'center';
-    centerPanel.style.justifyContent = 'center';
-    centerPanel.style.padding = '20px';
+    centerPanel.style.justifyContent = 'flex-start';
+    centerPanel.style.padding = '10px 20px';
     centerPanel.style.background = 'rgba(255, 255, 255, 0.95)';
     centerPanel.style.borderRadius = '15px';
     centerPanel.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
     centerPanel.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 15px;">
-            <div id="center-dice-number" style="font-size: 4em; font-weight: bold; color: #667eea; text-shadow: 0 2px 4px rgba(0,0,0,0.3); min-height: 1.2em; display: flex; align-items: center; justify-content: center;"></div>
-            <div id="center-dice" style="font-size: 4em; margin-top: -10px;">🎲</div>
+        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 5px;">
+            <div id="center-dice-number" style="font-size: 3.5em; font-weight: bold; color: #667eea; text-shadow: 0 2px 4px rgba(0,0,0,0.3); min-height: 1em; display: flex; align-items: center; justify-content: center;"></div>
+            <div id="center-dice" style="font-size: 3.5em; margin-top: -15px;">🎲</div>
         </div>
-        <button id="center-roll-btn" class="action-btn" style="width: 100%; max-width: 200px; margin-bottom: 15px;">🎲 ${t('rollDice')}</button>
-        <div id="center-event-log" style="background: #f8f9fa; padding: 10px; border-radius: 8px; width: 100%; max-height: 150px; overflow-y: auto; font-size: 0.85em;">
+        <button id="center-roll-btn" class="action-btn" style="width: 100%; max-width: 200px; margin-bottom: 8px;">🎲 ${t('rollDice')}</button>
+        <div id="center-event-log" style="background: #f8f9fa; padding: 8px; border-radius: 8px; width: 100%; max-height: 150px; overflow-y: auto; font-size: 0.85em;">
             <p>${t('welcome')}</p>
         </div>
     `;
@@ -1094,6 +1114,9 @@ function handleTileLanding(tile) {
 // ITEM STAT FORMATTING
 // ========================================
 
+// Fixed buff display order for easier comparison
+const BUFF_DISPLAY_ORDER = ['LIFESTEAL', 'FREEZE', 'POISON', 'AUTO_BLOCK', 'REFLECT'];
+
 function formatItemStats(item) {
     const parts = [];
 
@@ -1105,9 +1128,12 @@ function formatItemStats(item) {
     if (item.stats.crit) parts.push(`⚡ ${t('CRIT')} +${item.stats.crit}%`);
     if (item.special) parts.push(`✨ ${item.special.effect}`);
 
-    // Add buff display
+    // Add buff display in fixed order
     if (item.buffs && item.buffs.length > 0) {
-        item.buffs.forEach(buff => {
+        const sortedBuffs = [...item.buffs].sort((a, b) => {
+            return BUFF_DISPLAY_ORDER.indexOf(a.type) - BUFF_DISPLAY_ORDER.indexOf(b.type);
+        });
+        sortedBuffs.forEach(buff => {
             let text = `${buff.emoji} ${buff.type} ${buff.value}%`;
             if (buff.duration) text += ` (${buff.duration}t)`;
             parts.push(text);
@@ -1196,9 +1222,27 @@ function resetCombatState() {
     };
 }
 
+function getCombatPotionButtonsHTML() {
+    const hpCount = gameState.player.countPotionsByType('hp');
+    const spCount = gameState.player.countPotionsByType('sp');
+    let html = '';
+    if (hpCount > 0) {
+        html += `<button id="combat-hp-potion-btn" style="padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold;">
+            ❤️ ${t('hpPotion')} x${hpCount}
+        </button>`;
+    }
+    if (spCount > 0) {
+        html += `<button id="combat-sp-potion-btn" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold;">
+            💙 ${t('spPotion')} x${spCount}
+        </button>`;
+    }
+    return html;
+}
+
 function showCombatModal(enemy) {
     const modal = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
+    content.classList.add('combat-modal');
 
     const skill = gameState.player.equippedSkill;
     const skillConfig = skill ? SKILL_CONFIG[skill.type] : null;
@@ -1210,11 +1254,16 @@ function showCombatModal(enemy) {
         <h2 style="text-align: center; margin-bottom: 10px;">⚔️ ${t('battleStart')} ⚔️</h2>
 
         <!-- Skill Button -->
-        <div style="text-align: center; margin-bottom: 15px;">
+        <div style="text-align: center; margin-bottom: 10px;">
             <button id="use-skill-btn" style="padding: 10px 20px; background: ${skillBtnDisabled ? '#ccc' : 'linear-gradient(135deg, #667eea, #764ba2)'}; color: white; border: none; border-radius: 8px; cursor: ${skillBtnDisabled ? 'not-allowed' : 'pointer'}; font-weight: bold; font-size: 1em;" ${skillBtnDisabled ? 'disabled' : ''}>
                 ${skillBtnText}
             </button>
             <div style="font-size: 0.8em; color: #666; margin-top: 5px;">SP: ${gameState.player.stats.sp}/${gameState.player.stats.maxSp}</div>
+        </div>
+
+        <!-- Potions (count-based buttons) -->
+        <div id="combat-potions" style="text-align: center; margin-bottom: 15px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+            ${getCombatPotionButtonsHTML()}
         </div>
 
         <div class="combat-arena">
@@ -1392,6 +1441,54 @@ function executeCombat() {
     if (skillBtn) {
         skillBtn.addEventListener('click', useSkill);
     }
+
+    // Add potion button event listeners (count-based)
+    function usePotionByType(potionType) {
+        // Find first potion of the given type (hp or sp)
+        const potionIndex = gameState.player.inventory.findIndex(item =>
+            item.type === 'potion' && item.stats[potionType]
+        );
+        if (potionIndex === -1) return;
+
+        const item = gameState.player.inventory[potionIndex];
+
+        // Apply potion effect
+        if (item.stats.hp) {
+            gameState.player.heal(item.stats.hp);
+            addLog(`❤️ ${t('used')} ${t('hpPotion')}: +${item.stats.hp} HP!`);
+            updatePlayerHpBar();
+        }
+        if (item.stats.sp) {
+            gameState.player.stats.sp = Math.min(gameState.player.stats.sp + item.stats.sp, gameState.player.stats.maxSp);
+            addLog(`💙 ${t('used')} ${t('spPotion')}: +${item.stats.sp} SP!`);
+            updateSkillButton();
+        }
+
+        // Remove potion from inventory
+        gameState.player.inventory.splice(potionIndex, 1);
+
+        // Update potion buttons display (count-based)
+        updateCombatPotionButtons();
+        updateUI();
+    }
+
+    function updateCombatPotionButtons() {
+        const potionsDiv = document.getElementById('combat-potions');
+        if (potionsDiv) {
+            potionsDiv.innerHTML = getCombatPotionButtonsHTML();
+            // Re-add listeners
+            const hpBtn = potionsDiv.querySelector('#combat-hp-potion-btn');
+            const spBtn = potionsDiv.querySelector('#combat-sp-potion-btn');
+            if (hpBtn) hpBtn.addEventListener('click', () => usePotionByType('hp'));
+            if (spBtn) spBtn.addEventListener('click', () => usePotionByType('sp'));
+        }
+    }
+
+    // Initial potion button listeners
+    const hpPotionBtn = document.getElementById('combat-hp-potion-btn');
+    const spPotionBtn = document.getElementById('combat-sp-potion-btn');
+    if (hpPotionBtn) hpPotionBtn.addEventListener('click', () => usePotionByType('hp'));
+    if (spPotionBtn) spPotionBtn.addEventListener('click', () => usePotionByType('sp'));
 
     function handleVictory() {
         addLog(`🎉 ${t('victoryMsg')} ${t('defeatedEnemy')} ${enemy.name}!`);
@@ -1817,8 +1914,15 @@ function showLootModal(providedItems = null) {
             const keepBtn = content.querySelector(`.loot-keep-btn-${idx}`);
             if (keepBtn) {
                 keepBtn.addEventListener('click', () => {
-                    gameState.player.inventory.push(item);
-                    logEvent(`${t('addedToInventory')} ${item.emoji} ${item.name}`);
+                    if (gameState.player.canAddPotion(item)) {
+                        gameState.player.inventory.push(item);
+                        logEvent(`${t('addedToInventory')} ${item.emoji} ${item.name}`);
+                    } else {
+                        // Auto-sell if potion limit reached
+                        const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
+                        gameState.player.gainMoney(sellPrice);
+                        logEvent(`${t('potionFullSold')} ${sellPrice} ${t('coins')}`);
+                    }
                     lootItems[idx] = null;
                     updateInventoryUI();
                     renderLootUI();
@@ -1886,8 +1990,15 @@ function showLootModal(providedItems = null) {
                 // Add any remaining POTIONS to inventory (equipment must be decided)
                 lootItems.forEach(item => {
                     if (item && item.type === 'potion') {
-                        gameState.player.inventory.push(item);
-                        logEvent(`${t('addedToInventory')} ${item.emoji} ${item.name}`);
+                        if (gameState.player.canAddPotion(item)) {
+                            gameState.player.inventory.push(item);
+                            logEvent(`${t('addedToInventory')} ${item.emoji} ${item.name}`);
+                        } else {
+                            // Auto-sell if potion limit reached
+                            const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
+                            gameState.player.gainMoney(sellPrice);
+                            logEvent(`${t('potionFullSold')} ${sellPrice} ${t('coins')}`);
+                        }
                     } else if (item) {
                         // Auto-sell unclaimed equipment
                         const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
@@ -2027,6 +2138,12 @@ function openShop() {
 function buyItem(index) {
     const item = gameState.shopItems[index];
     if (!item) return;
+
+    // Check if potion and limit reached - prevent purchase
+    if (item.type === 'potion' && !gameState.player.canAddPotion(item)) {
+        logEvent(`${t('potionFullSold')} 0 ${t('coins')}`);
+        return;
+    }
 
     if (!gameState.player.spendMoney(item.price)) {
         return;
@@ -2473,6 +2590,7 @@ function restartGame() {
 
 function closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
+    document.getElementById('modal-content').classList.remove('combat-modal');
 }
 
 // ========================================

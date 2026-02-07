@@ -530,6 +530,12 @@ main {
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
+/* Combat modal full width */
+.modal-content.combat-modal {
+    width: 100%;
+    max-width: 95vw;
+}
+
 .modal-content h2 {
     color: #667eea;
     margin-bottom: 20px;
