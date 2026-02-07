@@ -721,9 +721,9 @@ function rollDice() {
                     centerDiceNumber.style.fontSize = '4em';
                 }
                 movePlayer(finalRoll);
-            }, 800);
+            }, 400);
         }
-    }, 80);
+    }, 40);
 }
 
 function movePlayer(steps) {
@@ -882,7 +882,7 @@ function showCombatModal(enemy) {
     // Start combat automatically after a short delay
     setTimeout(() => {
         executeCombat();
-    }, 100);
+    }, 20);
 }
 
 function executeCombat() {
@@ -907,7 +907,7 @@ function executeCombat() {
         playerCombatant.classList.add('attacking-left');
         setTimeout(() => {
             playerCombatant.classList.remove('attacking-left');
-        }, 150);
+        }, 300);
 
         const playerDmg = Math.max(1, Math.floor(
             (gameState.player.getTotalAtk() - enemy.def) * (0.8 + Math.random() * 0.4)
@@ -926,7 +926,7 @@ function executeCombat() {
 
             setTimeout(() => {
                 enemyCombatant.classList.remove('hurt');
-            }, 150);
+            }, 300);
 
             if (enemy.hp <= 0) {
                 clearInterval(combatInterval);
@@ -938,7 +938,7 @@ function executeCombat() {
 
                 setTimeout(() => {
                     showLootModal();
-                }, 750);
+                }, 1000);
                 return;
             }
 
@@ -947,7 +947,7 @@ function executeCombat() {
                 enemyCombatant.classList.add('attacking-right');
                 setTimeout(() => {
                     enemyCombatant.classList.remove('attacking-right');
-                }, 150);
+                }, 300);
 
                 const enemyDmg = Math.max(1, Math.floor(
                     (enemy.atk - gameState.player.getTotalDef()) * (0.8 + Math.random() * 0.4)
@@ -967,7 +967,7 @@ function executeCombat() {
 
                     setTimeout(() => {
                         playerCombatant.classList.remove('hurt');
-                    }, 150);
+                    }, 300);
 
                     if (gameState.player.stats.hp <= 0) {
                         clearInterval(combatInterval);
@@ -976,13 +976,13 @@ function executeCombat() {
                         setTimeout(() => {
                             closeModal();
                             gameOver();
-                        }, 750);
+                        }, 1000);
                     }
-                }, 100);
-            }, 200);
-        }, 100);
+                }, 200);
+            }, 400);
+        }, 200);
 
-    }, 700);
+    }, 1400);
 }
 
 function showLootModal(providedItems = null) {
