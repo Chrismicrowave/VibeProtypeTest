@@ -917,6 +917,35 @@ function updateInventoryUI() {
             ringSlot.style.color = '#999';
         }
     }
+
+    // Update active buffs display
+    const activeBuffsDiv = document.getElementById('active-buffs');
+    if (activeBuffsDiv) {
+        const allBuffs = [];
+
+        // Collect buffs from all equipped items
+        [gameState.player.equippedWeapon, gameState.player.equippedArmor, gameState.player.equippedRing].forEach(item => {
+            if (item && item.buffs) {
+                item.buffs.forEach(buff => {
+                    allBuffs.push(buff);
+                });
+            }
+        });
+
+        if (allBuffs.length > 0) {
+            // Sort by display order
+            allBuffs.sort((a, b) => BUFF_DISPLAY_ORDER.indexOf(a.type) - BUFF_DISPLAY_ORDER.indexOf(b.type));
+
+            const buffTexts = allBuffs.map(buff => {
+                const buffName = t(BUFF_TRANSLATION_KEY[buff.type]) || buff.type;
+                return `${buff.emoji} ${buffName} ${buff.value}%`;
+            });
+            activeBuffsDiv.innerHTML = buffTexts.join('<br>');
+            activeBuffsDiv.style.display = 'block';
+        } else {
+            activeBuffsDiv.style.display = 'none';
+        }
+    }
 }
 
 function logEvent(message) {
