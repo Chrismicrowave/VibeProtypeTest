@@ -927,3 +927,10 @@ main {
         font-size: 1em;
     }
 }
+
+/* Item Buffs Display */
+.item-buffs {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 3px;
+}

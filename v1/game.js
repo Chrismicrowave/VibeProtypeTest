@@ -707,7 +707,7 @@ function updateInventoryUI() {
     if (weaponSlot) {
         if (gameState.player.equippedWeapon) {
             weaponSlot.textContent = gameState.player.equippedWeapon.emoji;
-            weaponSlot.title = gameState.player.equippedWeapon.name;
+            weaponSlot.title = `${gameState.player.equippedWeapon.name}\n${formatItemStats(gameState.player.equippedWeapon)}`;
             weaponSlot.style.fontSize = '';
             weaponSlot.style.color = '';
         } else {
@@ -721,7 +721,7 @@ function updateInventoryUI() {
     if (armorSlot) {
         if (gameState.player.equippedArmor) {
             armorSlot.textContent = gameState.player.equippedArmor.emoji;
-            armorSlot.title = gameState.player.equippedArmor.name;
+            armorSlot.title = `${gameState.player.equippedArmor.name}\n${formatItemStats(gameState.player.equippedArmor)}`;
             armorSlot.style.fontSize = '';
             armorSlot.style.color = '';
         } else {
@@ -735,7 +735,7 @@ function updateInventoryUI() {
     if (ringSlot) {
         if (gameState.player.equippedRing) {
             ringSlot.textContent = gameState.player.equippedRing.emoji;
-            ringSlot.title = gameState.player.equippedRing.name;
+            ringSlot.title = `${gameState.player.equippedRing.name}\n${formatItemStats(gameState.player.equippedRing)}`;
             ringSlot.style.fontSize = '';
             ringSlot.style.color = '';
         } else {
@@ -908,6 +908,45 @@ function handleTileLanding(tile) {
             logEvent(`${t('foundCoins')} ${coins} ${t('coins')}! 💰`);
             break;
     }
+}
+
+// ========================================
+// ITEM STAT FORMATTING
+// ========================================
+
+function formatItemStats(item) {
+    const parts = [];
+
+    // Existing stat display
+    if (item.stats.atk) parts.push(`⚔️ ${t('ATK')} +${item.stats.atk}`);
+    if (item.stats.def) parts.push(`🛡️ ${t('DEF')} +${item.stats.def}`);
+    if (item.stats.hp) parts.push(`❤️ ${t('HP')} +${item.stats.hp}`);
+    if (item.stats.sp) parts.push(`💙 ${t('SP')} +${item.stats.sp}`);
+    if (item.stats.crit) parts.push(`⚡ ${t('CRIT')} +${item.stats.crit}%`);
+    if (item.special) parts.push(`✨ ${item.special.effect}`);
+
+    // Add buff display
+    if (item.buffs && item.buffs.length > 0) {
+        item.buffs.forEach(buff => {
+            let text = `${buff.emoji} ${buff.type} ${buff.value}%`;
+            if (buff.duration) text += ` (${buff.duration}t)`;
+            parts.push(text);
+        });
+    }
+
+    return parts.join(' | ');
+}
+
+function formatBuffsOnly(item) {
+    if (!item.buffs || item.buffs.length === 0) return '';
+
+    const buffTexts = item.buffs.map(buff => {
+        let text = `${buff.emoji} ${buff.value}%`;
+        if (buff.duration) text += ` (${buff.duration}t)`;
+        return text;
+    });
+
+    return buffTexts.join(' | ');
 }
 
 // ========================================
@@ -1259,17 +1298,6 @@ function showLootModal(providedItems = null) {
     const modal = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
 
-    function formatItemStats(item) {
-        const parts = [];
-        if (item.stats.atk) parts.push(`⚔️ ${t('ATK')} +${item.stats.atk}`);
-        if (item.stats.def) parts.push(`🛡️ ${t('DEF')} +${item.stats.def}`);
-        if (item.stats.hp) parts.push(`❤️ ${t('HP')} +${item.stats.hp}`);
-        if (item.stats.sp) parts.push(`💙 ${t('SP')} +${item.stats.sp}`);
-        if (item.stats.crit) parts.push(`⚡ ${t('CRIT')} +${item.stats.crit}`);
-        if (item.special) parts.push(`✨ ${item.special.effect}`);
-        return parts.join(' | ');
-    }
-
     function getCurrentEquippedItem(itemType) {
         if (itemType === 'weapon') return gameState.player.equippedWeapon;
         if (itemType === 'armor') return gameState.player.equippedArmor;
@@ -1539,17 +1567,6 @@ function openShop() {
 
     const modal = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
-
-    function formatItemStats(item) {
-        const parts = [];
-        if (item.stats.atk) parts.push(`⚔️ ATK +${item.stats.atk}`);
-        if (item.stats.def) parts.push(`🛡️ DEF +${item.stats.def}`);
-        if (item.stats.hp) parts.push(`❤️ HP +${item.stats.hp}`);
-        if (item.stats.sp) parts.push(`💙 SP +${item.stats.sp}`);
-        if (item.stats.crit) parts.push(`⚡ CRIT +${item.stats.crit}`);
-        if (item.special) parts.push(`✨ ${item.special.effect}`);
-        return parts.join(' | ');
-    }
 
     function getCurrentEquipped(type) {
         if (type === 'weapon') return gameState.player.equippedWeapon;
