@@ -29,7 +29,7 @@ const TIMING = {
 // Test Mode Configuration
 const TEST_MODE = {
     enabled: true,              // Set to false for normal gameplay
-    tileTypes: ['treasure']     // Only these tile types in test mode
+    tileTypes: ['skillTrainer'] // Only these tile types in test mode
 };
 
 // Combat Configuration
@@ -51,6 +51,49 @@ const ITEM_BUFF_RULES = {
     ring: { allowed: ['LIFESTEAL'], maxBuffs: 3 },
     potion: { allowed: [], maxBuffs: 0 }
 };
+
+// Skill Configuration
+const SKILL_CONFIG = {
+    HEALING: {
+        name: 'Healing',
+        emoji: '💚',
+        type: 'instant',
+        spCost: 15,
+        baseValue: 50,          // 50% of max HP
+        upgradeBonus: 10,       // +10% per level
+        description: 'Heal % of max HP'
+    },
+    CLONE: {
+        name: 'Clone',
+        emoji: '👥',
+        type: 'buff',
+        spCost: 15,
+        baseDuration: 5,        // 5 rounds
+        upgradeBonus: 1,        // +1 round per level
+        description: 'Summon clone to attack'
+    },
+    EXPLOSION: {
+        name: 'Explosion',
+        emoji: '💥',
+        type: 'attack',
+        spCost: 15,
+        baseDamage: 50,         // Base damage
+        upgradeBonus: 15,       // +15 damage per level
+        description: 'Deal fixed damage'
+    },
+    SHELVES: {
+        name: 'Shelves',
+        emoji: '🛡️',
+        type: 'buff',
+        spCost: 15,
+        baseDuration: 5,        // 5 rounds
+        baseAbsorb: 50,         // Absorb up to 50 damage
+        upgradeBonus: 20,       // +20 absorb per level
+        description: 'Block all damage'
+    }
+};
+
+const SKILL_TRAINER_PRICE = 100; // Base price to learn skill
 
 // Language System
 let currentLanguage = localStorage.getItem('gameLanguage') || 'en';
@@ -108,11 +151,33 @@ const TRANSLATIONS = {
         poisonDamage: 'Poison deals',
         blocked: 'Blocked all damage!',
         reflected: 'Reflected',
+        // Skills
+        skillHealing: 'Healing',
+        skillClone: 'Clone',
+        skillExplosion: 'Explosion',
+        skillShelves: 'Shelves',
+        useSkill: 'Use Skill',
+        notEnoughSP: 'Not enough SP!',
+        noSkillEquipped: 'No skill equipped!',
+        healedHP: 'Healed',
+        cloneActivated: 'Clone summoned!',
+        cloneAttacks: 'Clone attacks for',
+        explosionDamage: 'Explosion deals',
+        shelvesActivated: 'Shelves activated!',
+        shelvesAbsorbed: 'Shelves absorbed',
+        shelvesExpired: 'Shelves expired!',
+        learnSkill: 'Learn Skill',
+        upgradeSkill: 'Upgrade Skill',
+        currentSkill: 'Current Skill',
+        newSkill: 'New Skill',
+        keepCurrent: 'Keep Current',
+        skillLevel: 'Lv.',
+        turns: 'turns',
         shop: 'Shop',
         yourMoney: 'Your Money',
         leaveShop: 'Leave Shop',
         treasure: 'Treasure',
-        skillTrainer: 'Skill trainer (Coming soon!)',
+        skillTrainer: 'Skill Trainer',
         bossFight: 'BOSS FIGHT! (Coming soon!)',
         gameOver: 'Game Over',
         defeated: 'You were defeated...',
@@ -219,11 +284,33 @@ const TRANSLATIONS = {
         poisonDamage: '毒素造成',
         blocked: '格挡了所有伤害！',
         reflected: '反弹了',
+        // Skills
+        skillHealing: '治愈',
+        skillClone: '分身',
+        skillExplosion: '爆炸',
+        skillShelves: '护盾',
+        useSkill: '使用技能',
+        notEnoughSP: 'SP不足！',
+        noSkillEquipped: '未装备技能！',
+        healedHP: '恢复了',
+        cloneActivated: '召唤分身！',
+        cloneAttacks: '分身攻击造成',
+        explosionDamage: '爆炸造成',
+        shelvesActivated: '护盾激活！',
+        shelvesAbsorbed: '护盾吸收了',
+        shelvesExpired: '护盾消失！',
+        learnSkill: '学习技能',
+        upgradeSkill: '升级技能',
+        currentSkill: '当前技能',
+        newSkill: '新技能',
+        keepCurrent: '保持当前',
+        skillLevel: '等级',
+        turns: '回合',
         shop: '商店',
         yourMoney: '你的金币',
         leaveShop: '离开商店',
         treasure: '宝箱',
-        skillTrainer: '技能训练师（即将推出！）',
+        skillTrainer: '技能训练师',
         bossFight: 'Boss战！（即将推出！）',
         gameOver: '游戏结束',
         defeated: '你被击败了...',
@@ -362,7 +449,10 @@ const gameState = {
     shopItems: [], // Store current shop items
     combatState: {
         enemyFrozen: false,
-        enemyPoison: { active: false, percent: 0, turnsLeft: 0 }
+        enemyPoison: { active: false, percent: 0, turnsLeft: 0 },
+        // Skill effects
+        cloneActive: { active: false, turnsLeft: 0 },
+        shelvesActive: { active: false, turnsLeft: 0, absorbLeft: 0 }
     }
 };
 
@@ -388,7 +478,7 @@ class Player {
         this.equippedWeapon = null;
         this.equippedArmor = null;
         this.equippedRing = null;
-        this.skills = [];
+        this.equippedSkill = null;  // { type: 'HEALING', level: 1 }
         this.passiveBuffs = [];
         this.persistedItem = null; // Item carried over from previous game
     }
@@ -704,6 +794,25 @@ function updateUI() {
     document.getElementById('level-display').textContent = gameState.level;
     document.getElementById('bosses-display').textContent = `${gameState.bossesDefeated}/3`;
     document.getElementById('loop-display').textContent = `${p.loops}/5`;
+
+    // Update equipped skill display
+    const activeSkillsList = document.getElementById('active-skills-list');
+    if (activeSkillsList) {
+        if (p.equippedSkill) {
+            const config = SKILL_CONFIG[p.equippedSkill.type];
+            activeSkillsList.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: linear-gradient(135deg, #667eea22, #764ba222); border-radius: 8px;">
+                    <span style="font-size: 1.5em;">${config.emoji}</span>
+                    <div>
+                        <div style="font-weight: bold;">${config.name}</div>
+                        <div style="font-size: 0.8em; color: #666;">${t('skillLevel')}${p.equippedSkill.level} | 15 SP</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            activeSkillsList.innerHTML = `<p class="empty-text">${t('noActiveSkills')}</p>`;
+        }
+    }
 }
 
 function updateInventoryUI() {
@@ -1031,7 +1140,9 @@ function getPlayerDefenseBuffs() {
 function resetCombatState() {
     gameState.combatState = {
         enemyFrozen: false,
-        enemyPoison: { active: false, percent: 0, turnsLeft: 0 }
+        enemyPoison: { active: false, percent: 0, turnsLeft: 0 },
+        cloneActive: { active: false, turnsLeft: 0 },
+        shelvesActive: { active: false, turnsLeft: 0, absorbLeft: 0 }
     };
 }
 
@@ -1039,8 +1150,21 @@ function showCombatModal(enemy) {
     const modal = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
 
+    const skill = gameState.player.equippedSkill;
+    const skillConfig = skill ? SKILL_CONFIG[skill.type] : null;
+    const skillBtnText = skill ? `${skillConfig.emoji} ${skillConfig.name} (${t('skillLevel')}${skill.level}) - 15 SP` : t('noSkillEquipped');
+    const skillBtnDisabled = !skill || gameState.player.stats.sp < 15;
+
     content.innerHTML = `
-        <h2 style="text-align: center; margin-bottom: 20px;">⚔️ ${t('battleStart')} ⚔️</h2>
+        <h2 style="text-align: center; margin-bottom: 10px;">⚔️ ${t('battleStart')} ⚔️</h2>
+
+        <!-- Skill Button -->
+        <div style="text-align: center; margin-bottom: 15px;">
+            <button id="use-skill-btn" style="padding: 10px 20px; background: ${skillBtnDisabled ? '#ccc' : 'linear-gradient(135deg, #667eea, #764ba2)'}; color: white; border: none; border-radius: 8px; cursor: ${skillBtnDisabled ? 'not-allowed' : 'pointer'}; font-weight: bold; font-size: 1em;" ${skillBtnDisabled ? 'disabled' : ''}>
+                ${skillBtnText}
+            </button>
+            <div style="font-size: 0.8em; color: #666; margin-top: 5px;">SP: ${gameState.player.stats.sp}/${gameState.player.stats.maxSp}</div>
+        </div>
 
         <div class="combat-arena">
             <!-- Player Side -->
@@ -1053,6 +1177,7 @@ function showCombatModal(enemy) {
                         <span id="combat-player-hp-text" class="combatant-hp-text">${gameState.player.stats.hp}/${gameState.player.stats.maxHp}</span>
                     </div>
                 </div>
+                <div id="player-buffs" style="font-size: 1.2em; margin-top: 5px;"></div>
             </div>
 
             <!-- Enemy Side -->
@@ -1065,6 +1190,7 @@ function showCombatModal(enemy) {
                         <span id="enemy-hp-text" class="combatant-hp-text">${enemy.hp}/${enemy.maxHp}</span>
                     </div>
                 </div>
+                <div id="enemy-debuffs" style="font-size: 1.2em; margin-top: 5px;"></div>
             </div>
         </div>
 
@@ -1106,6 +1232,96 @@ function executeCombat() {
         document.getElementById('combat-player-hp-bar').style.width = `${playerHpPercent}%`;
         document.getElementById('combat-player-hp-text').textContent =
             `${gameState.player.stats.hp}/${gameState.player.stats.maxHp}`;
+    }
+
+    function updateBuffDisplay() {
+        const playerBuffs = document.getElementById('player-buffs');
+        const enemyDebuffs = document.getElementById('enemy-debuffs');
+
+        // Player buffs
+        let playerBuffText = '';
+        if (gameState.combatState.cloneActive.active) {
+            playerBuffText += `👥${gameState.combatState.cloneActive.turnsLeft} `;
+        }
+        if (gameState.combatState.shelvesActive.active) {
+            playerBuffText += `🛡️${gameState.combatState.shelvesActive.turnsLeft} `;
+        }
+        if (playerBuffs) playerBuffs.textContent = playerBuffText;
+
+        // Enemy debuffs
+        let enemyDebuffText = '';
+        if (gameState.combatState.enemyFrozen) {
+            enemyDebuffText += '❄️ ';
+        }
+        if (gameState.combatState.enemyPoison.active) {
+            enemyDebuffText += `☠️${gameState.combatState.enemyPoison.turnsLeft} `;
+        }
+        if (enemyDebuffs) enemyDebuffs.textContent = enemyDebuffText;
+    }
+
+    function updateSkillButton() {
+        const btn = document.getElementById('use-skill-btn');
+        if (!btn) return;
+        const canUse = gameState.player.equippedSkill && gameState.player.stats.sp >= 15;
+        btn.disabled = !canUse;
+        btn.style.background = canUse ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#ccc';
+        btn.style.cursor = canUse ? 'pointer' : 'not-allowed';
+
+        // Update SP display
+        const spDisplay = btn.nextElementSibling;
+        if (spDisplay) {
+            spDisplay.textContent = `SP: ${gameState.player.stats.sp}/${gameState.player.stats.maxSp}`;
+        }
+    }
+
+    function useSkill() {
+        const skill = gameState.player.equippedSkill;
+        if (!skill || gameState.player.stats.sp < 15) return;
+
+        gameState.player.stats.sp -= 15;
+        const config = SKILL_CONFIG[skill.type];
+
+        switch (skill.type) {
+            case 'HEALING':
+                const healPercent = config.baseValue + (skill.level - 1) * config.upgradeBonus;
+                const healAmount = Math.floor(gameState.player.stats.maxHp * healPercent / 100);
+                gameState.player.heal(healAmount);
+                addLog(`💚 ${t('healedHP')} ${healAmount} HP!`);
+                updatePlayerHpBar();
+                break;
+
+            case 'CLONE':
+                const cloneDuration = config.baseDuration + (skill.level - 1) * config.upgradeBonus;
+                gameState.combatState.cloneActive = { active: true, turnsLeft: cloneDuration };
+                addLog(`👥 ${t('cloneActivated')} (${cloneDuration} ${t('turns')})`);
+                break;
+
+            case 'EXPLOSION':
+                const explosionDmg = config.baseDamage + (skill.level - 1) * config.upgradeBonus;
+                enemy.hp -= explosionDmg;
+                addLog(`💥 ${t('explosionDamage')} ${explosionDmg} ${t('damage')}!`);
+                updateEnemyHpBar();
+                if (enemy.hp <= 0) {
+                    handleVictory();
+                }
+                break;
+
+            case 'SHELVES':
+                const shelvesDuration = config.baseDuration;
+                const shelvesAbsorb = config.baseAbsorb + (skill.level - 1) * config.upgradeBonus;
+                gameState.combatState.shelvesActive = { active: true, turnsLeft: shelvesDuration, absorbLeft: shelvesAbsorb };
+                addLog(`🛡️ ${t('shelvesActivated')} (${shelvesAbsorb} HP, ${shelvesDuration} ${t('turns')})`);
+                break;
+        }
+
+        updateSkillButton();
+        updateBuffDisplay();
+    }
+
+    // Add skill button event listener
+    const skillBtn = document.getElementById('use-skill-btn');
+    if (skillBtn) {
+        skillBtn.addEventListener('click', useSkill);
     }
 
     function handleVictory() {
@@ -1197,6 +1413,23 @@ function executeCombat() {
                 }
             }
 
+            // Clone attack (if active)
+            if (gameState.combatState.cloneActive.active) {
+                const cloneDmg = Math.max(1, Math.floor(
+                    (gameState.player.getTotalAtk() - enemy.def) * (0.8 + Math.random() * 0.4)
+                ));
+                enemy.hp -= cloneDmg;
+                addLog(`👥 ${t('cloneAttacks')} ${cloneDmg} ${t('damage')}!`);
+                updateEnemyHpBar();
+
+                // Decrement clone duration
+                gameState.combatState.cloneActive.turnsLeft--;
+                if (gameState.combatState.cloneActive.turnsLeft <= 0) {
+                    gameState.combatState.cloneActive = { active: false, turnsLeft: 0 };
+                }
+                updateBuffDisplay();
+            }
+
             // Check for enemy death after player attack
             if (enemy.hp <= 0) {
                 clearInterval(combatInterval);
@@ -1265,33 +1498,51 @@ function executeCombat() {
                 // Player hurt animation
                 setTimeout(() => {
                     if (!blocked) {
-                        playerCombatant.classList.add('hurt');
-                        gameState.player.takeDamage(enemyDmg);
-                        addLog(`${enemy.emoji} ${enemy.name} ${t('enemyDealt')} ${enemyDmg} ${t('damage')}!`);
+                        // Check shelves absorption first
+                        if (gameState.combatState.shelvesActive.active) {
+                            const absorbed = Math.min(enemyDmg, gameState.combatState.shelvesActive.absorbLeft);
+                            gameState.combatState.shelvesActive.absorbLeft -= absorbed;
+                            enemyDmg -= absorbed;
+                            addLog(`🛡️ ${t('shelvesAbsorbed')} ${absorbed} ${t('damage')}!`);
 
-                        updatePlayerHpBar();
-
-                        // Apply reflect damage to enemy
-                        if (reflectDmg > 0) {
-                            enemy.hp -= reflectDmg;
-                            addLog(`↩️ ${t('reflected')} ${reflectDmg} ${t('damage')}!`);
-                            updateEnemyHpBar();
-
-                            // Check for enemy death after reflect
-                            if (enemy.hp <= 0) {
-                                clearInterval(combatInterval);
-                                handleVictory();
-                                return;
+                            // Decrement shelves duration
+                            gameState.combatState.shelvesActive.turnsLeft--;
+                            if (gameState.combatState.shelvesActive.turnsLeft <= 0 || gameState.combatState.shelvesActive.absorbLeft <= 0) {
+                                gameState.combatState.shelvesActive = { active: false, turnsLeft: 0, absorbLeft: 0 };
+                                addLog(`🛡️ ${t('shelvesExpired')}`);
                             }
+                            updateBuffDisplay();
                         }
 
-                        setTimeout(() => {
-                            playerCombatant.classList.remove('hurt');
-                        }, TIMING.hurtAnimation);
+                        if (enemyDmg > 0) {
+                            playerCombatant.classList.add('hurt');
+                            gameState.player.takeDamage(enemyDmg);
+                            addLog(`${enemy.emoji} ${enemy.name} ${t('enemyDealt')} ${enemyDmg} ${t('damage')}!`);
 
-                        if (gameState.player.stats.hp <= 0) {
-                            clearInterval(combatInterval);
-                            handleDefeat();
+                            updatePlayerHpBar();
+
+                            // Apply reflect damage to enemy
+                            if (reflectDmg > 0) {
+                                enemy.hp -= reflectDmg;
+                                addLog(`↩️ ${t('reflected')} ${reflectDmg} ${t('damage')}!`);
+                                updateEnemyHpBar();
+
+                                // Check for enemy death after reflect
+                                if (enemy.hp <= 0) {
+                                    clearInterval(combatInterval);
+                                    handleVictory();
+                                    return;
+                                }
+                            }
+
+                            setTimeout(() => {
+                                playerCombatant.classList.remove('hurt');
+                            }, TIMING.hurtAnimation);
+
+                            if (gameState.player.stats.hp <= 0) {
+                                clearInterval(combatInterval);
+                                handleDefeat();
+                            }
                         }
                     }
                 }, TIMING.playerHurtDelay);
@@ -1761,8 +2012,112 @@ function openTreasure() {
 }
 
 function openSkillTrainer() {
-    logEvent(`⭐ ${t('skillTrainer')}`);
-    // TODO: Implement skill learning system
+    gameState.currentPhase = 'skillTrainer';
+
+    // Pick a random skill to offer
+    const skillTypes = Object.keys(SKILL_CONFIG);
+    const randomSkillType = skillTypes[Math.floor(Math.random() * skillTypes.length)];
+    const skillConfig = SKILL_CONFIG[randomSkillType];
+
+    // Calculate price (increases with level)
+    const currentSkill = gameState.player.equippedSkill;
+    const isUpgrade = currentSkill && currentSkill.type === randomSkillType;
+    const newLevel = isUpgrade ? currentSkill.level + 1 : 1;
+    const price = SKILL_TRAINER_PRICE * newLevel;
+
+    const modal = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+
+    // Build skill description with level info
+    let skillValue = '';
+    switch (randomSkillType) {
+        case 'HEALING':
+            skillValue = `${skillConfig.baseValue + (newLevel - 1) * skillConfig.upgradeBonus}% HP`;
+            break;
+        case 'CLONE':
+            skillValue = `${skillConfig.baseDuration + (newLevel - 1) * skillConfig.upgradeBonus} turns`;
+            break;
+        case 'EXPLOSION':
+            skillValue = `${skillConfig.baseDamage + (newLevel - 1) * skillConfig.upgradeBonus} damage`;
+            break;
+        case 'SHELVES':
+            skillValue = `${skillConfig.baseAbsorb + (newLevel - 1) * skillConfig.upgradeBonus} absorb, ${skillConfig.baseDuration} turns`;
+            break;
+    }
+
+    let currentSkillHTML = '';
+    if (currentSkill) {
+        const currentConfig = SKILL_CONFIG[currentSkill.type];
+        currentSkillHTML = `
+            <div style="flex: 1; text-align: center; background: #fff3cd; padding: 15px; border-radius: 8px; border: 2px solid #ffc107;">
+                <div style="font-size: 0.8em; color: #856404; font-weight: bold; margin-bottom: 5px;">${t('currentSkill')}</div>
+                <div style="font-size: 3em; margin-bottom: 5px;">${currentConfig.emoji}</div>
+                <div style="font-weight: bold; color: #2c3e50;">${currentConfig.name}</div>
+                <div style="color: #666; font-size: 0.85em;">${t('skillLevel')}${currentSkill.level}</div>
+            </div>
+            <div style="display: flex; align-items: center; font-size: 2em; color: #667eea;">➡️</div>
+        `;
+    }
+
+    content.innerHTML = `
+        <h2 style="text-align: center; margin-bottom: 20px;">⭐ ${t('skillTrainer')} ⭐</h2>
+        <p style="text-align: center; color: #666; margin-bottom: 15px;">💰 ${t('yourMoney')}: ${gameState.player.stats.money}</p>
+
+        <div style="display: flex; gap: 15px; justify-content: center; align-items: center; margin-bottom: 20px;">
+            ${currentSkillHTML}
+            <div style="flex: 1; text-align: center; background: #d1ecf1; padding: 15px; border-radius: 8px; border: 2px solid #17a2b8; max-width: 200px;">
+                <div style="font-size: 0.8em; color: #0c5460; font-weight: bold; margin-bottom: 5px;">${isUpgrade ? t('upgradeSkill') : t('newSkill')}</div>
+                <div style="font-size: 3em; margin-bottom: 5px;">${skillConfig.emoji}</div>
+                <div style="font-weight: bold; color: #2c3e50;">${skillConfig.name}</div>
+                <div style="color: #666; font-size: 0.85em;">${t('skillLevel')}${newLevel}</div>
+                <div style="color: #17a2b8; font-size: 0.85em; margin-top: 5px;">${skillValue}</div>
+                <div style="color: #e74c3c; font-weight: bold; margin-top: 5px;">💰 ${price}</div>
+            </div>
+        </div>
+
+        <p style="text-align: center; color: #666; font-size: 0.85em; margin-bottom: 20px;">
+            ${skillConfig.description}<br>
+            SP Cost: 15
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin: 0 auto;">
+            <button id="learn-skill-btn" style="padding: 12px; background: ${gameState.player.stats.money >= price ? '#28a745' : '#ccc'}; color: white; border: none; border-radius: 8px; cursor: ${gameState.player.stats.money >= price ? 'pointer' : 'not-allowed'}; font-weight: bold; font-size: 1em;" ${gameState.player.stats.money < price ? 'disabled' : ''}>
+                ${isUpgrade ? `⬆️ ${t('upgradeSkill')}` : `📚 ${t('learnSkill')}`} (💰${price})
+            </button>
+            ${currentSkill && !isUpgrade ? `
+                <button id="keep-skill-btn" style="padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1em;">
+                    ❌ ${t('keepCurrent')}
+                </button>
+            ` : ''}
+            <button id="leave-trainer-btn" style="padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1em;">
+                🚪 ${t('leaveShop')}
+            </button>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+
+    // Event listeners
+    document.getElementById('learn-skill-btn')?.addEventListener('click', () => {
+        if (gameState.player.stats.money >= price) {
+            gameState.player.stats.money -= price;
+            gameState.player.equippedSkill = { type: randomSkillType, level: newLevel };
+            logEvent(`⭐ ${isUpgrade ? t('upgradeSkill') : t('learnSkill')}: ${skillConfig.emoji} ${skillConfig.name} ${t('skillLevel')}${newLevel}`);
+            updateUI();
+            closeModal();
+            gameState.currentPhase = 'playing';
+        }
+    });
+
+    document.getElementById('keep-skill-btn')?.addEventListener('click', () => {
+        closeModal();
+        gameState.currentPhase = 'playing';
+    });
+
+    document.getElementById('leave-trainer-btn')?.addEventListener('click', () => {
+        closeModal();
+        gameState.currentPhase = 'playing';
+    });
 }
 
 function startBossFight() {
