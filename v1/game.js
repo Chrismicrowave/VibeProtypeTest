@@ -42,6 +42,7 @@ const TEST_MODE = {
 
 // Combat Configuration
 const CRIT_MULTIPLIER = 2.0;
+const DAMAGE_VARIANCE = { min: 0.8, range: 0.4 }; // 80-120% damage
 
 // Round/Difficulty Scaling Configuration
 const ROUND_SCALING = {
@@ -245,14 +246,14 @@ const TRANSLATIONS = {
         allItemsCollected: 'All items collected!',
         addedToInventory: 'Added',
         toInventory: 'to inventory',
-        ringSlotsFull: 'ring slots full',
+        ringSlotsFull: 'ring slot full',
         leftClick: 'Left click: Equip/Use',
         rightClick: 'Right click: Sell for',
         clickToUnequip: 'Click to unequip',
         noWeapon: 'No weapon',
         noArmor: 'No armor',
         sellConfirm: 'Sell',
-        ringsMax: 'You can only equip 2 rings! Unequip one first.',
+        ringsMax: 'You can only equip 1 ring!',
         currentEquipped: 'Current Equipped',
         newItem: 'New Item',
         equipNewSellOld: 'Equip New & Sell Old',
@@ -398,7 +399,7 @@ const TRANSLATIONS = {
         noWeapon: '无武器',
         noArmor: '无护甲',
         sellConfirm: '出售',
-        ringsMax: '最多只能装备2个戒指！请先卸下一个。',
+        ringsMax: '只能装备1个戒指！',
         currentEquipped: '当前装备',
         newItem: '新物品',
         equipNewSellOld: '装备新的并出售旧的',
@@ -1274,7 +1275,12 @@ function formatItemStats(item) {
 function formatBuffsOnly(item) {
     if (!item.buffs || item.buffs.length === 0) return '';
 
-    const buffTexts = item.buffs.map(buff => {
+    // Sort buffs using BUFF_DISPLAY_ORDER for consistent display
+    const sortedBuffs = [...item.buffs].sort((a, b) => {
+        return BUFF_DISPLAY_ORDER.indexOf(a.type) - BUFF_DISPLAY_ORDER.indexOf(b.type);
+    });
+
+    const buffTexts = sortedBuffs.map(buff => {
         let text = `${buff.emoji} ${buff.value}%`;
         if (buff.duration) text += ` (${buff.duration}t)`;
         return text;
@@ -1662,7 +1668,7 @@ function executeCombat() {
 
         // Calculate base damage
         let playerDmg = Math.max(1, Math.floor(
-            (gameState.player.getTotalAtk() - enemy.def) * (0.8 + Math.random() * 0.4)
+            (gameState.player.getTotalAtk() - enemy.def) * (DAMAGE_VARIANCE.min + Math.random() * DAMAGE_VARIANCE.range)
         ));
 
         // Check for critical hit
@@ -1707,7 +1713,7 @@ function executeCombat() {
                         gameState.combatState.enemyPoison = {
                             active: true,
                             percent: buff.value,
-                            turnsLeft: 3
+                            turnsLeft: buff.duration || 3
                         };
                         addLog(`☠️ ${enemy.name} ${t('poisoned')}`);
                         updateBuffDisplay();
@@ -1718,7 +1724,7 @@ function executeCombat() {
             // Clone attack (if active)
             if (gameState.combatState.cloneActive.active) {
                 const cloneDmg = Math.max(1, Math.floor(
-                    (gameState.player.getTotalAtk() - enemy.def) * (0.8 + Math.random() * 0.4)
+                    (gameState.player.getTotalAtk() - enemy.def) * (DAMAGE_VARIANCE.min + Math.random() * DAMAGE_VARIANCE.range)
                 ));
                 enemy.hp -= cloneDmg;
                 addLog(`👥 ${t('cloneAttacks')} ${cloneDmg} ${t('damage')}!`);
@@ -1777,7 +1783,7 @@ function executeCombat() {
 
                 // Calculate enemy damage (DEF applied in takeDamage)
                 let enemyDmg = Math.max(1, Math.floor(
-                    enemy.atk * (0.8 + Math.random() * 0.4)
+                    enemy.atk * (DAMAGE_VARIANCE.min + Math.random() * DAMAGE_VARIANCE.range)
                 ));
 
                 // Check player defense buffs
@@ -1886,6 +1892,7 @@ function showLootModal(providedItems = null) {
     function getCurrentEquippedItem(itemType) {
         if (itemType === 'weapon') return gameState.player.equippedWeapon;
         if (itemType === 'armor') return gameState.player.equippedArmor;
+        if (itemType === 'ring') return gameState.player.equippedRing;
         return null;
     }
 
@@ -2357,7 +2364,8 @@ function openSkillTrainer() {
     const currentSkill = gameState.player.equippedSkill;
     const isUpgrade = currentSkill && currentSkill.type === randomSkillType;
     const newLevel = isUpgrade ? currentSkill.level + 1 : 1;
-    const price = SKILL_TRAINER_PRICE * newLevel;
+    const skillScale = 1 + (gameState.round - 1) * 0.2 + (gameState.set - 1) * 0.3;
+    const price = Math.floor(SKILL_TRAINER_PRICE * newLevel * skillScale);
 
     const modal = document.getElementById('modal-overlay');
     const content = document.getElementById('modal-content');
@@ -2581,28 +2589,6 @@ function useItem(index) {
     updateInventoryUI();
     updateUI();
 }
-
-function unequipWeapon() {
-    if (gameState.player.equippedWeapon) {
-        gameState.player.inventory.push(gameState.player.equippedWeapon);
-        logEvent(`${t('unequipped')} ${gameState.player.equippedWeapon.emoji} ${gameState.player.equippedWeapon.name}`);
-        gameState.player.equippedWeapon = null;
-        updateInventoryUI();
-        updateUI();
-    }
-}
-
-function unequipArmor() {
-    if (gameState.player.equippedArmor) {
-        gameState.player.inventory.push(gameState.player.equippedArmor);
-        logEvent(`${t('unequipped')} ${gameState.player.equippedArmor.emoji} ${gameState.player.equippedArmor.name}`);
-        gameState.player.equippedArmor = null;
-        updateInventoryUI();
-        updateUI();
-    }
-}
-
-// unequipRing removed - single ring slot, equipment only replaced via loot/shop
 
 function sellItem(index) {
     const item = gameState.player.inventory[index];
