@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.8-220451';
+const VERSION = 'v0.1.9-142100';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -660,6 +660,7 @@ class Player {
     spendMoney(amount) {
         if (this.stats.money >= amount) {
             this.stats.money -= amount;
+            playSound('coin');
             updateUI();
             return true;
         }
@@ -1149,7 +1150,7 @@ function rollDice() {
     if (gameState.isRolling || gameState.currentPhase !== 'playing') return;
 
     gameState.isRolling = true;
-    playSound('diceRoll');
+    playSound('diceRoll', 1.3);
 
     const rollBtn = document.getElementById('roll-btn');
     if (rollBtn) rollBtn.disabled = true;
@@ -2608,6 +2609,7 @@ function openSkillTrainer() {
     document.getElementById('learn-skill-btn')?.addEventListener('click', () => {
         if (gameState.player.stats.money >= price) {
             gameState.player.stats.money -= price;
+            playSound('coin'); // Play coin sound for spending money
             gameState.player.equippedSkill = { type: randomSkillType, level: newLevel };
             playSound('skill'); // Play skill sound when learning/upgrading skills
             logEvent(`⭐ ${isUpgrade ? t('upgradeSkill') : t('learnSkill')}: ${skillConfig.emoji} ${newSkillName} ${t('skillLevel')}${newLevel}`);
