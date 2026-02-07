@@ -668,7 +668,7 @@ const ITEM_TEMPLATES = {
         { name: 'Ring of Strength', emoji: '💍', stats: { atk: 3 }, price: 80 },
         { name: 'Ring of Defense', emoji: '💍', stats: { def: 3 }, price: 80 },
         { name: 'Lucky Ring', emoji: '💍', stats: { crit: 5 }, price: 100 },
-        { name: 'Vampire Ring', emoji: '💍', stats: {}, special: { effect: 'lifesteal', value: 0.2 }, price: 120 },
+        { name: 'Vampire Ring', emoji: '🧛', stats: { atk: 2 }, price: 120 },
     ]
 };
 
@@ -1202,7 +1202,7 @@ function formatItemStats(item) {
     if (item.stats.hp) parts.push(`❤️ ${t('HP')} +${item.stats.hp}`);
     if (item.stats.sp) parts.push(`💙 ${t('SP')} +${item.stats.sp}`);
     if (item.stats.crit) parts.push(`⚡ ${t('CRIT')} +${item.stats.crit}%`);
-    if (item.special) parts.push(`✨ ${item.special.effect}`);
+    // Special effects removed - using buff system instead
 
     // Add buff display in fixed order
     if (item.buffs && item.buffs.length > 0) {
