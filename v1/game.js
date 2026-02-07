@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.2';
+const VERSION = 'v0.1.3-204420';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -487,6 +487,7 @@ function updateLanguageUI() {
 }
 
 const TILE_TYPES = {
+    START: 'start',
     SHOP: 'shop',
     COMBAT: 'combat',
     TREASURE: 'treasure',
@@ -495,6 +496,7 @@ const TILE_TYPES = {
 };
 
 const TILE_EMOJIS = {
+    start: '🏁',
     shop: '🏪',
     combat: '⚔️',
     treasure: '💎',
@@ -766,7 +768,8 @@ function generateBoard() {
         }
 
         for (let i = 0; i < 32; i++) {
-            const type = getRandomTile();
+            // Tile 0 is always the start tile
+            const type = i === 0 ? 'start' : getRandomTile();
             board.push({
                 id: i,
                 type: type,
@@ -1105,9 +1108,14 @@ function movePlayer(steps) {
     let currentStep = 0;
     const startPosition = gameState.player.position;
 
+    // Check if this move will cross the start tile (complete a loop)
+    const willCrossStart = startPosition + steps >= 32;
+    // If crossing, stop at tile 0 instead of continuing past
+    const actualSteps = willCrossStart ? (32 - startPosition) : steps;
+
     // Animate step by step
     const moveInterval = setInterval(() => {
-        if (currentStep < steps) {
+        if (currentStep < actualSteps) {
             currentStep++;
             gameState.player.position = (startPosition + currentStep) % 32;
             renderBoard();
@@ -1121,8 +1129,8 @@ function movePlayer(steps) {
         } else {
             clearInterval(moveInterval);
 
-            // Check if completed a loop (32 tiles)
-            if (startPosition + steps >= 32) {
+            // Check if completed a loop (stopped at start tile)
+            if (willCrossStart) {
                 gameState.player.loops++;
                 gameState.player.gainMoney(25);
 
@@ -1243,6 +1251,10 @@ function handleTileLanding(tile) {
             gameState.player.gainMoney(coins);
             logEvent(`${t('foundCoins')} ${coins} ${t('coins')}! 💰`);
             showCenterResult(`💰 +${coins}`);
+            break;
+        case TILE_TYPES.START:
+            // Start tile - round rewards already handled in movePlayer
+            showCenterResult('🏁 ' + t('loopCompleted').split('!')[0] + '!');
             break;
     }
 }
@@ -2543,7 +2555,8 @@ function generateSupplyBoard() {
     ];
 
     for (let i = 0; i < 32; i++) {
-        const type = supplyDistribution[i];
+        // Tile 0 is always the start tile
+        const type = i === 0 ? 'start' : supplyDistribution[i];
         board.push({
             id: i,
             type: type,
@@ -2653,11 +2666,17 @@ function sellItem(index) {
 function gameOver() {
     gameState.currentPhase = 'gameOver';
 
-    // Select random item to keep
+    // Select random equipped item to keep (weapon, armor, or ring)
     let keptItem = null;
-    if (gameState.player.inventory.length > 0) {
-        const randomIndex = Math.floor(Math.random() * gameState.player.inventory.length);
-        keptItem = gameState.player.inventory[randomIndex];
+    const equippedItems = [
+        gameState.player.equippedWeapon,
+        gameState.player.equippedArmor,
+        gameState.player.equippedRing
+    ].filter(item => item !== null);
+
+    if (equippedItems.length > 0) {
+        const randomIndex = Math.floor(Math.random() * equippedItems.length);
+        keptItem = equippedItems[randomIndex];
     }
 
     const modal = document.getElementById('modal-overlay');
@@ -2715,7 +2734,7 @@ function restartGame() {
     gameState.currentPhase = 'playing';
     gameState.board = generateBoard();
 
-    // Add persisted item
+    // Add persisted item (equip it based on type)
     if (persistedItemData) {
         try {
             const itemData = JSON.parse(persistedItemData);
@@ -2727,7 +2746,19 @@ function restartGame() {
                 itemData.special,
                 itemData.price
             );
-            gameState.player.addItem(item);
+            // Restore buffs if present
+            if (itemData.buffs) item.buffs = itemData.buffs;
+
+            // Equip based on type
+            if (item.type === 'weapon') {
+                gameState.player.equippedWeapon = item;
+            } else if (item.type === 'armor') {
+                gameState.player.equippedArmor = item;
+            } else if (item.type === 'ring') {
+                gameState.player.equippedRing = item;
+            } else {
+                gameState.player.addItem(item);
+            }
             logEvent(`${t('startingWith')} ${item.emoji} ${item.name} ${t('fromPreviousRun')}`);
         } catch (e) {
             console.error('Error loading persisted item:', e);
