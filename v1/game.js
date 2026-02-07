@@ -16,7 +16,8 @@ const TIMING = {
 
     // Combat
     combatStartDelay: 20,       // Delay before combat begins
-    combatTurnInterval: 1400,   // Time between turns
+    combatTurnInterval: 1050,   // Time between turns (75%)
+    firstTurnDelay: 280,        // Delay before first turn (20% of interval)
     attackAnimation: 300,       // Attack animation duration
     hurtAnimation: 300,         // Hurt animation duration
     enemyHurtDelay: 200,        // Delay before enemy takes damage
@@ -24,16 +25,31 @@ const TIMING = {
     playerHurtDelay: 200,       // Delay before player takes damage
     victoryDelay: 1000,         // Delay after victory before loot
     defeatDelay: 1000,          // Delay after defeat before game over
+    skillEmojiDisplay: 500,     // Duration to show skill emoji over enemy
 };
 
 // Test Mode Configuration
 const TEST_MODE = {
-    enabled: true,              // Set to false for normal gameplay
-    tileTypes: ['skillTrainer'] // Only these tile types in test mode
+    enabled: false,             // Set to false for normal gameplay
+    tileTypes: ['skillTrainer', 'combat'] // Only these tile types in test mode
 };
 
 // Combat Configuration
 const CRIT_MULTIPLIER = 2.0;
+
+// Round/Difficulty Scaling Configuration
+const ROUND_SCALING = {
+    1: { hp: 1.0, atk: 1.0, def: 1.0, gold: 1.0 },
+    2: { hp: 1.15, atk: 1.1, def: 1.1, gold: 1.1 },
+    3: { hp: 1.35, atk: 1.2, def: 1.2, gold: 1.2 },
+    4: { hp: 1.55, atk: 1.35, def: 1.35, gold: 1.35 },
+    5: { hp: 1.75, atk: 1.5, def: 1.5, gold: 1.5 }
+};
+
+// Get set multiplier: 1 + (set - 1) * 0.5
+function getSetMultiplier(set) {
+    return 1 + (set - 1) * 0.5;
+}
 
 // Buff Configuration
 const BUFF_CONFIG = {
@@ -68,7 +84,7 @@ const SKILL_CONFIG = {
         emoji: '👥',
         type: 'buff',
         spCost: 15,
-        baseDuration: 5,        // 5 rounds
+        baseDuration: 3,        // 3 rounds
         upgradeBonus: 1,        // +1 round per level
         description: 'Summon clone to attack'
     },
@@ -87,7 +103,7 @@ const SKILL_CONFIG = {
         type: 'buff',
         spCost: 15,
         baseDuration: 5,        // 5 rounds
-        baseAbsorb: 50,         // Absorb up to 50 damage
+        baseAbsorb: 75,         // Absorb up to 75 damage
         upgradeBonus: 20,       // +20 absorb per level
         description: 'Block all damage'
     }
@@ -104,6 +120,10 @@ const TRANSLATIONS = {
         level: 'Level',
         bossesDefeated: 'Bosses Defeated',
         loop: 'Loop',
+        round: 'Round',
+        set: 'Set',
+        supplyRound: 'Supply Round',
+        supplyRoundMessage: 'Supply Round! Full HP/SP restored. Shop and treasure only!',
         playerStats: 'Player Stats',
         inventory: 'Inventory',
         skills: 'Skills',
@@ -237,6 +257,10 @@ const TRANSLATIONS = {
         level: '等级',
         bossesDefeated: '已击败Boss',
         loop: '回合',
+        round: '轮次',
+        set: '阶段',
+        supplyRound: '补给轮',
+        supplyRoundMessage: '补给轮！生命和法力全部恢复。只有商店和宝箱！',
         playerStats: '玩家属性',
         inventory: '背包',
         skills: '技能',
@@ -383,10 +407,11 @@ function switchLanguage() {
 
 function updateLanguageUI() {
     document.querySelector('header h1').textContent = `🎲 ${t('title')} 🔥💧🌿`;
+    const roundDisplay = gameState.isSupplyRound ? t('supplyRound') : `${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`;
     document.getElementById('game-info').innerHTML = `
         <span>${t('level')}: <span id="level-display">${gameState.level}</span></span>
         <span>${t('bossesDefeated')}: <span id="bosses-display">${gameState.bossesDefeated}/3</span></span>
-        <span>${t('loop')}: <span id="loop-display">${gameState.player ? gameState.player.loops : 0}/5</span></span>
+        <span><span id="round-display">${roundDisplay}</span></span>
     `;
 
     // Update panel headers
@@ -443,7 +468,10 @@ const gameState = {
     board: [],
     level: 1,
     bossesDefeated: 0,
-    currentPhase: 'playing', // 'playing', 'combat', 'shop', 'gameOver', 'boss'
+    round: 1,  // Current round (1-5)
+    set: 1,    // Current set (1+, increases after Supply Round)
+    isSupplyRound: false, // True during Supply Round
+    currentPhase: 'playing', // 'playing', 'combat', 'shop', 'gameOver', 'boss', 'supply'
     isRolling: false,
     currentEnemy: null, // Store current enemy for combat
     shopItems: [], // Store current shop items
@@ -487,23 +515,8 @@ class Player {
         const oldPosition = this.position;
         this.position = (this.position + steps) % 32;
 
-        // Check if completed a loop
-        if (oldPosition + steps >= 32) {
-            this.loops++;
-            this.gainMoney(50); // Bonus for completing loop
-
-            // Heal 30% of max HP
-            const healAmount = Math.floor(this.stats.maxHp * 0.3);
-            this.heal(healAmount);
-
-            logEvent(`🎉 ${t('loopCompleted')} & +${healAmount} HP! (${this.loops}/5)`);
-
-            // Check for boss fight
-            if (this.loops >= 5) {
-                this.loops = 0;
-                setTimeout(() => startBossFight(), TIMING.bossFightDelay);
-            }
-        }
+        // Note: Loop completion logic is now handled in movePlayer() function
+        // This method is kept for position tracking only
 
         return this.position;
     }
@@ -607,7 +620,7 @@ const ITEM_TEMPLATES = {
     armor: [
         { name: 'Leather Armor', emoji: '🦺', stats: { def: 5 }, price: 50 },
         { name: 'Chain Mail', emoji: '🛡️', stats: { def: 10 }, price: 100 },
-        { name: 'Plate Armor', emoji: '🛡️', stats: { def: 15 }, price: 150 },
+        { name: 'Plate Armor', emoji: '🛡️', stats: { def: 10 }, price: 150 },
     ],
     potions: [
         { name: 'Health Potion', emoji: '🧪', stats: { hp: 30 }, price: 30 },
@@ -793,7 +806,10 @@ function updateUI() {
     // Update game info
     document.getElementById('level-display').textContent = gameState.level;
     document.getElementById('bosses-display').textContent = `${gameState.bossesDefeated}/3`;
-    document.getElementById('loop-display').textContent = `${p.loops}/5`;
+    const roundDisplayEl = document.getElementById('round-display');
+    if (roundDisplayEl) {
+        roundDisplayEl.textContent = gameState.isSupplyRound ? t('supplyRound') : `${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`;
+    }
 
     // Update equipped skill display
     const activeSkillsList = document.getElementById('active-skills-list');
@@ -984,17 +1000,43 @@ function movePlayer(steps) {
         } else {
             clearInterval(moveInterval);
 
-            // Check if completed a loop
+            // Check if completed a loop (32 tiles)
             if (startPosition + steps >= 32) {
                 gameState.player.loops++;
                 gameState.player.gainMoney(50);
-                logEvent(`🎉 ${t('loopCompleted')} (${gameState.player.loops}/5)`);
 
-                // Check for boss fight
-                if (gameState.player.loops >= 5) {
+                // Recover 30% of max HP and SP on loop completion
+                const healAmount = Math.floor(gameState.player.stats.maxHp * 0.3);
+                const spAmount = Math.floor(gameState.player.stats.maxSp * 0.3);
+                gameState.player.heal(healAmount);
+                gameState.player.stats.sp = Math.min(gameState.player.stats.sp + spAmount, gameState.player.stats.maxSp);
+
+                // Check if this is a Supply Round loop completion
+                if (gameState.isSupplyRound) {
+                    // Supply Round completed - go to next set
+                    gameState.isSupplyRound = false;
+                    gameState.set++;
+                    gameState.round = 1;
                     gameState.player.loops = 0;
-                    setTimeout(() => startBossFight(), TIMING.bossFightDelay);
+                    gameState.board = generateBoard(); // Generate normal board
+                    renderBoard();
+                    logEvent(`🎉 ${t('set')} ${gameState.set} ${t('round')} 1!`);
+                } else {
+                    // Normal round progression
+                    logEvent(`🎉 ${t('loopCompleted')} +${healAmount} HP, +${spAmount} SP! (${t('round')} ${gameState.round}/5)`);
+
+                    // Check for round 5 -> Supply Round
+                    if (gameState.round >= 5) {
+                        gameState.player.loops = 0;
+                        setTimeout(() => startSupplyRound(), TIMING.bossFightDelay);
+                    } else {
+                        // Increment round
+                        gameState.round++;
+                        gameState.player.loops = 0;
+                        logEvent(`📈 ${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`);
+                    }
                 }
+                updateUI();
             }
 
             const tile = gameState.board[gameState.player.position];
@@ -1036,7 +1078,10 @@ function handleTileLanding(tile) {
             openSkillTrainer();
             break;
         case TILE_TYPES.EMPTY:
-            const coins = Math.floor(Math.random() * 20) + 10;
+            // Use round/set scaling for empty tile gold
+            const roundScale = ROUND_SCALING[gameState.round] || ROUND_SCALING[5];
+            const setMult = getSetMultiplier(gameState.set);
+            const coins = Math.floor((8 + Math.random() * 16) * roundScale.gold * setMult);
             gameState.player.gainMoney(coins);
             logEvent(`${t('foundCoins')} ${coins} ${t('coins')}! 💰`);
             break;
@@ -1067,7 +1112,7 @@ function formatItemStats(item) {
         });
     }
 
-    return parts.join('\n');
+    return parts.join('<br>');
 }
 
 function formatBuffsOnly(item) {
@@ -1079,7 +1124,7 @@ function formatBuffsOnly(item) {
         return text;
     });
 
-    return buffTexts.join('\n');
+    return buffTexts.join('<br>');
 }
 
 // ========================================
@@ -1104,15 +1149,18 @@ function generateEnemy() {
     ];
 
     const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-    const levelScale = 1 + (gameState.level - 1) * 0.3;
+
+    // Use round/set scaling instead of level
+    const roundScale = ROUND_SCALING[gameState.round] || ROUND_SCALING[5];
+    const setMult = getSetMultiplier(gameState.set);
 
     return {
         name: type.name,
         emoji: type.emoji,
-        hp: Math.floor(60 * type.hpMult * levelScale),
-        maxHp: Math.floor(60 * type.hpMult * levelScale),
-        atk: Math.floor(20 * type.atkMult * levelScale),
-        def: Math.floor(5 * levelScale)
+        hp: Math.floor(60 * type.hpMult * roundScale.hp * setMult),
+        maxHp: Math.floor(60 * type.hpMult * roundScale.hp * setMult),
+        atk: Math.floor(20 * type.atkMult * roundScale.atk * setMult),
+        def: Math.floor(5 * roundScale.def * setMult)
     };
 }
 
@@ -1170,28 +1218,28 @@ function showCombatModal(enemy) {
         <div class="combat-arena">
             <!-- Player Side -->
             <div class="combatant combatant-left" id="player-combatant">
+                <div id="player-buffs" style="font-size: 1.2em; margin-bottom: 5px; min-height: 1.5em;"></div>
                 <div class="combatant-name">${t('you')}</div>
-                <div class="combatant-emoji">🤺</div>
+                <div class="combatant-emoji" id="player-emoji">🤺</div>
                 <div class="combatant-hp-container">
                     <div style="position: relative;">
                         <div id="combat-player-hp-bar" class="combatant-hp-bar" style="width: ${(gameState.player.stats.hp / gameState.player.stats.maxHp) * 100}%"></div>
                         <span id="combat-player-hp-text" class="combatant-hp-text">${gameState.player.stats.hp}/${gameState.player.stats.maxHp}</span>
                     </div>
                 </div>
-                <div id="player-buffs" style="font-size: 1.2em; margin-top: 5px;"></div>
             </div>
 
             <!-- Enemy Side -->
             <div class="combatant combatant-right" id="enemy-combatant">
+                <div id="enemy-debuffs" style="font-size: 1.2em; margin-bottom: 5px; min-height: 1.5em;"></div>
                 <div class="combatant-name">${enemy.name}</div>
-                <div class="combatant-emoji">${enemy.emoji}</div>
+                <div class="combatant-emoji" id="enemy-emoji">${enemy.emoji}</div>
                 <div class="combatant-hp-container">
                     <div style="position: relative;">
                         <div id="enemy-hp-bar" class="combatant-hp-bar" style="width: 100%"></div>
                         <span id="enemy-hp-text" class="combatant-hp-text">${enemy.hp}/${enemy.maxHp}</span>
                     </div>
                 </div>
-                <div id="enemy-debuffs" style="font-size: 1.2em; margin-top: 5px;"></div>
             </div>
         </div>
 
@@ -1277,10 +1325,26 @@ function executeCombat() {
         }
     }
 
+    function showSkillEmoji(emoji, target = 'enemy') {
+        const emojiId = target === 'player' ? 'player-emoji' : 'enemy-emoji';
+        const emojiEl = document.getElementById(emojiId);
+        if (emojiEl) {
+            const originalEmoji = emojiEl.textContent;
+            emojiEl.textContent = emoji;
+            setTimeout(() => {
+                emojiEl.textContent = originalEmoji;
+            }, TIMING.skillEmojiDisplay);
+        }
+    }
+
     function useSkill() {
         const skill = gameState.player.equippedSkill;
         const config = skill ? SKILL_CONFIG[skill.type] : null;
         if (!skill || !config || gameState.player.stats.sp < config.spCost) return;
+
+        // Show skill emoji on correct target (attack=enemy, buff/heal=player)
+        const target = config.type === 'attack' ? 'enemy' : 'player';
+        showSkillEmoji(config.emoji, target);
 
         gameState.player.stats.sp -= config.spCost;
 
@@ -1330,7 +1394,10 @@ function executeCombat() {
     function handleVictory() {
         addLog(`🎉 ${t('victoryMsg')} ${t('defeatedEnemy')} ${enemy.name}!`);
 
-        const reward = Math.floor((20 + Math.random() * 30) * gameState.level);
+        // Use round/set scaling for gold rewards
+        const roundScale = ROUND_SCALING[gameState.round] || ROUND_SCALING[5];
+        const setMult = getSetMultiplier(gameState.set);
+        const reward = Math.floor((16 + Math.random() * 24) * roundScale.gold * setMult);
         gameState.player.gainMoney(reward);
         addLog(`💰 ${t('gained')} ${reward} ${t('coins')}!`);
 
@@ -1353,7 +1420,9 @@ function executeCombat() {
     }
 
     let turn = 0;
-    const combatInterval = setInterval(() => {
+    let combatInterval = null;
+
+    function executeTurn() {
         turn++;
 
         // ========== PLAYER TURN ==========
@@ -1551,8 +1620,13 @@ function executeCombat() {
                 }, TIMING.playerHurtDelay);
             }, TIMING.enemyTurnDelay);
         }, TIMING.enemyHurtDelay);
+    }
 
-    }, TIMING.combatTurnInterval);
+    // First turn after short delay, then regular interval
+    setTimeout(() => {
+        executeTurn();
+        combatInterval = setInterval(executeTurn, TIMING.combatTurnInterval);
+    }, TIMING.firstTurnDelay);
 }
 
 function showLootModal(providedItems = null) {
@@ -1561,12 +1635,13 @@ function showLootModal(providedItems = null) {
     if (providedItems) {
         lootItems = providedItems;
     } else {
-        // Generate 1-3 random items for combat
+        // Generate 1-3 random items for combat - use round/set scaling
         const numItems = Math.floor(Math.random() * 3) + 1;
+        const levelScale = 1 + (gameState.round - 1) * 0.2 + (gameState.set - 1) * 0.3;
         lootItems = [];
         for (let i = 0; i < numItems; i++) {
             const itemType = ['weapons', 'armor', 'potions', 'rings'][Math.floor(Math.random() * 4)];
-            const item = createRandomItem(itemType, 1 + gameState.level * 0.2);
+            const item = createRandomItem(itemType, levelScale);
             lootItems.push(item);
         }
     }
@@ -1836,12 +1911,13 @@ function showLootModal(providedItems = null) {
 function openShop() {
     gameState.currentPhase = 'shop';
 
-    // Generate 3 random items
+    // Generate 3 random items - use round/set scaling
     const itemTypes = ['weapons', 'armor', 'potions', 'rings'];
+    const levelScale = 1 + (gameState.round - 1) * 0.2 + (gameState.set - 1) * 0.3;
     gameState.shopItems = [];
     for (let i = 0; i < 3; i++) {
         const randomType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
-        gameState.shopItems.push(createRandomItem(randomType, 1 + gameState.level * 0.3));
+        gameState.shopItems.push(createRandomItem(randomType, levelScale));
     }
 
     const modal = document.getElementById('modal-overlay');
@@ -2000,7 +2076,10 @@ function buyItem(index) {
 // ========================================
 
 function openTreasure() {
-    const coins = Math.floor((30 + Math.random() * 50) * gameState.level);
+    // Use round/set scaling for treasure gold
+    const roundScale = ROUND_SCALING[gameState.round] || ROUND_SCALING[5];
+    const setMult = getSetMultiplier(gameState.set);
+    const coins = Math.floor((24 + Math.random() * 40) * roundScale.gold * setMult);
     gameState.player.gainMoney(coins);
     logEvent(`💎 ${t('treasure')}: 💰 ${coins} ${t('coins')}`);
     updateUI();
@@ -2008,7 +2087,8 @@ function openTreasure() {
     // 50% chance for item
     if (Math.random() < 0.5) {
         const itemType = ['weapons', 'armor', 'potions', 'rings'][Math.floor(Math.random() * 4)];
-        const item = createRandomItem(itemType, 1 + gameState.level * 0.3);
+        const levelScale = 1 + (gameState.round - 1) * 0.2 + (gameState.set - 1) * 0.3;
+        const item = createRandomItem(itemType, levelScale);
         // Show loot modal for the item
         showLootModal([item]);
     }
@@ -2051,11 +2131,27 @@ function openSkillTrainer() {
     let currentSkillHTML = '';
     if (currentSkill) {
         const currentConfig = SKILL_CONFIG[currentSkill.type];
+        // Calculate current skill value
+        let currentSkillValue = '';
+        switch (currentSkill.type) {
+            case 'HEALING':
+                currentSkillValue = `${currentConfig.baseValue + (currentSkill.level - 1) * currentConfig.upgradeBonus}% HP`;
+                break;
+            case 'CLONE':
+                currentSkillValue = `${currentConfig.baseDuration + (currentSkill.level - 1) * currentConfig.upgradeBonus} turns`;
+                break;
+            case 'EXPLOSION':
+                currentSkillValue = `${currentConfig.baseDamage + (currentSkill.level - 1) * currentConfig.upgradeBonus} damage`;
+                break;
+            case 'SHELVES':
+                currentSkillValue = `${currentConfig.baseAbsorb + (currentSkill.level - 1) * currentConfig.upgradeBonus} absorb`;
+                break;
+        }
         currentSkillHTML = `
             <div style="flex: 1; text-align: center; background: #fff3cd; padding: 15px; border-radius: 8px; border: 2px solid #ffc107;">
                 <div style="font-size: 0.8em; color: #856404; font-weight: bold; margin-bottom: 5px;">${t('currentSkill')}</div>
                 <div style="font-size: 3em; margin-bottom: 5px;">${currentConfig.emoji}</div>
-                <div style="font-weight: bold; color: #2c3e50;">${currentConfig.name}</div>
+                <div style="font-weight: bold; color: #2c3e50;">${currentConfig.name} - ${currentSkillValue}</div>
                 <div style="color: #666; font-size: 0.85em;">${t('skillLevel')}${currentSkill.level}</div>
             </div>
             <div style="display: flex; align-items: center; font-size: 2em; color: #667eea;">➡️</div>
@@ -2071,9 +2167,8 @@ function openSkillTrainer() {
             <div style="flex: 1; text-align: center; background: #d1ecf1; padding: 15px; border-radius: 8px; border: 2px solid #17a2b8; max-width: 200px;">
                 <div style="font-size: 0.8em; color: #0c5460; font-weight: bold; margin-bottom: 5px;">${isUpgrade ? t('upgradeSkill') : t('newSkill')}</div>
                 <div style="font-size: 3em; margin-bottom: 5px;">${skillConfig.emoji}</div>
-                <div style="font-weight: bold; color: #2c3e50;">${skillConfig.name}</div>
+                <div style="font-weight: bold; color: #2c3e50;">${skillConfig.name} - ${skillValue}</div>
                 <div style="color: #666; font-size: 0.85em;">${t('skillLevel')}${newLevel}</div>
-                <div style="color: #17a2b8; font-size: 0.85em; margin-top: 5px;">${skillValue}</div>
                 <div style="color: #e74c3c; font-weight: bold; margin-top: 5px;">💰 ${price}</div>
             </div>
         </div>
@@ -2126,6 +2221,85 @@ function openSkillTrainer() {
 function startBossFight() {
     logEvent(`👹 ${t('bossFight')}`);
     // TODO: Implement boss fight
+}
+
+// ========================================
+// SUPPLY ROUND SYSTEM
+// ========================================
+
+function generateSupplyBoard() {
+    // Special board with only shop and treasure tiles
+    const board = [];
+    const supplyDistribution = [
+        'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure',
+        'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure',
+        'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure',
+        'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure'
+    ];
+
+    for (let i = 0; i < 32; i++) {
+        const type = supplyDistribution[i];
+        board.push({
+            id: i,
+            type: type,
+            emoji: TILE_EMOJIS[type]
+        });
+    }
+
+    return board;
+}
+
+function startSupplyRound() {
+    gameState.isSupplyRound = true;
+    gameState.currentPhase = 'playing';
+
+    // Full HP and SP heal
+    gameState.player.stats.hp = gameState.player.stats.maxHp;
+    gameState.player.stats.sp = gameState.player.stats.maxSp;
+
+    // Generate special supply board
+    gameState.board = generateSupplyBoard();
+
+    // Reset player position for the supply round
+    gameState.player.position = 0;
+    gameState.player.loops = 0;
+
+    // Show supply round message
+    const modal = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+
+    content.innerHTML = `
+        <h2 style="text-align: center; margin-bottom: 20px;">🎁 ${t('supplyRound')} 🎁</h2>
+        <div style="text-align: center; font-size: 4em; margin: 20px 0;">🏪💎🏪💎</div>
+        <p style="text-align: center; font-size: 1.2em; margin: 20px 0; color: #28a745;">
+            ${t('supplyRoundMessage')}
+        </p>
+        <div style="text-align: center; margin: 20px 0;">
+            <div style="font-size: 1.1em; color: #667eea;">
+                ❤️ HP: ${gameState.player.stats.hp}/${gameState.player.stats.maxHp} (Full!)<br>
+                💙 SP: ${gameState.player.stats.sp}/${gameState.player.stats.maxSp} (Full!)
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button id="start-supply-btn" class="modal-btn primary">🎲 ${t('continueAdventure')}</button>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+
+    document.getElementById('start-supply-btn').addEventListener('click', () => {
+        closeModal();
+        renderBoard();
+        updateUI();
+
+        // Re-attach event listener to center button after re-render
+        const centerRollBtn = document.getElementById('center-roll-btn');
+        if (centerRollBtn) {
+            centerRollBtn.addEventListener('click', rollDice);
+        }
+
+        logEvent(`🎁 ${t('supplyRound')} - ${t('set')} ${gameState.set}`);
+    });
 }
 
 // ========================================
@@ -2242,7 +2416,20 @@ function restartGame() {
     gameState.player = new Player();
     gameState.level = 1;
     gameState.bossesDefeated = 0;
+    gameState.round = 1;
+    gameState.set = 1;
+    gameState.isSupplyRound = false;
+    gameState.isRolling = false;
+    gameState.currentEnemy = null;
+    gameState.shopItems = [];
+    gameState.combatState = {
+        enemyFrozen: false,
+        enemyPoison: { active: false, percent: 0, turnsLeft: 0 },
+        cloneActive: { active: false, turnsLeft: 0 },
+        shelvesActive: { active: false, turnsLeft: 0, absorbLeft: 0 }
+    };
     gameState.currentPhase = 'playing';
+    gameState.board = generateBoard();
 
     // Add persisted item
     if (persistedItemData) {
@@ -2268,6 +2455,13 @@ function restartGame() {
     renderBoard();
     updateUI();
     updateInventoryUI();
+
+    // Re-attach event listener to center button after re-render
+    const centerRollBtn = document.getElementById('center-roll-btn');
+    if (centerRollBtn) {
+        centerRollBtn.addEventListener('click', rollDice);
+    }
+
     logEvent(`🎮 ${t('gameRestarted')}`);
 }
 
