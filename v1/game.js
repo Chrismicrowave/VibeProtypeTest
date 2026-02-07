@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.7-220000';
+const VERSION = 'v0.1.8-220451';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -1812,7 +1812,7 @@ function executeCombat() {
         // Enemy hurt animation
         setTimeout(() => {
             enemyCombatant.classList.add('hurt');
-            playSound('hit', 1.1); // Player attacks = slightly higher pitch
+            playSound('hit', 1.0); // Player attacks = same as enemy
             enemy.hp -= playerDmg;
 
             if (isCrit) {
