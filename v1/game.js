@@ -970,11 +970,20 @@ function logEvent(message) {
     // Add to DOM
     const logDiv = document.getElementById('event-log');
     if (logDiv) {
+        // Remove highlight from previous first message
+        if (logDiv.firstChild) {
+            logDiv.firstChild.style.background = 'transparent';
+            logDiv.firstChild.style.fontWeight = 'normal';
+        }
+
         const p = document.createElement('p');
         p.textContent = message;
         p.style.marginBottom = '5px';
         p.style.paddingLeft = '5px';
         p.style.borderLeft = '3px solid #667eea';
+        p.style.background = 'linear-gradient(90deg, #667eea22, transparent)';
+        p.style.fontWeight = 'bold';
+        p.style.borderRadius = '4px';
         logDiv.insertBefore(p, logDiv.firstChild);
 
         // Keep only last 8 messages in DOM
