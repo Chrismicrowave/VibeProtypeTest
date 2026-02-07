@@ -28,7 +28,7 @@ const TIMING = {
 
 // Test Mode Configuration
 const TEST_MODE = {
-    enabled: true,              // Set to false for normal gameplay
+    enabled: false,             // Set to false for normal gameplay
     tileTypes: ['shop', 'combat'] // Only these tile types in test mode
 };
 
