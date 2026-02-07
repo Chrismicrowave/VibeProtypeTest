@@ -179,6 +179,10 @@ const TRANSLATIONS = {
         skillClone: 'Clone',
         skillExplosion: 'Explosion',
         skillShelves: 'Shelves',
+        skillDescHealing: 'Heal % of max HP',
+        skillDescClone: 'Summon clone to attack',
+        skillDescExplosion: 'Deal fixed damage',
+        skillDescShelves: 'Block all damage',
         useSkill: 'Use Skill',
         notEnoughSP: 'Not enough SP!',
         noSkillEquipped: 'No skill equipped!',
@@ -320,6 +324,10 @@ const TRANSLATIONS = {
         skillClone: '分身',
         skillExplosion: '爆炸',
         skillShelves: '护盾',
+        skillDescHealing: '恢复最大生命值的百分比',
+        skillDescClone: '召唤分身进行攻击',
+        skillDescExplosion: '造成固定伤害',
+        skillDescShelves: '格挡所有伤害',
         useSkill: '使用技能',
         notEnoughSP: 'SP不足！',
         noSkillEquipped: '未装备技能！',
@@ -1170,6 +1178,14 @@ const SKILL_TRANSLATION_KEY = {
     'CLONE': 'skillClone',
     'EXPLOSION': 'skillExplosion',
     'SHELVES': 'skillShelves'
+};
+
+// Map skill type to description translation key
+const SKILL_DESC_KEY = {
+    'HEALING': 'skillDescHealing',
+    'CLONE': 'skillDescClone',
+    'EXPLOSION': 'skillDescExplosion',
+    'SHELVES': 'skillDescShelves'
 };
 
 function formatItemStats(item) {
@@ -2354,8 +2370,8 @@ function openSkillTrainer() {
         </div>
 
         <p style="text-align: center; color: #666; font-size: 0.85em; margin-bottom: 20px;">
-            ${skillConfig.description}<br>
-            SP Cost: 15
+            ${t(SKILL_DESC_KEY[randomSkillType])}<br>
+            SP: 15
         </p>
 
         <div style="display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin: 0 auto;">
