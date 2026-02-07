@@ -1732,9 +1732,9 @@ function executeCombat() {
                     enemyCombatant.classList.remove('attacking-right');
                 }, TIMING.attackAnimation);
 
-                // Calculate enemy damage
+                // Calculate enemy damage (DEF applied in takeDamage)
                 let enemyDmg = Math.max(1, Math.floor(
-                    (enemy.atk - gameState.player.getTotalDef()) * (0.8 + Math.random() * 0.4)
+                    enemy.atk * (0.8 + Math.random() * 0.4)
                 ));
 
                 // Check player defense buffs
