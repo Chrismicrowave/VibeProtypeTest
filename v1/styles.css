@@ -191,6 +191,17 @@ main {
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
 }
 
+.tile.active .tile-emoji {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.8em;
+}
+
+.tile.active .tile-number {
+    display: none;
+}
+
 @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
