@@ -997,12 +997,18 @@ function restoreEventLog() {
     const logDiv = document.getElementById('event-log');
     if (logDiv && gameState.eventLogMessages.length > 0) {
         logDiv.innerHTML = '';
-        gameState.eventLogMessages.forEach(msg => {
+        gameState.eventLogMessages.forEach((msg, index) => {
             const p = document.createElement('p');
             p.textContent = msg;
             p.style.marginBottom = '5px';
             p.style.paddingLeft = '5px';
             p.style.borderLeft = '3px solid #667eea';
+            // Highlight first (most recent) message
+            if (index === 0) {
+                p.style.background = 'linear-gradient(90deg, #667eea22, transparent)';
+                p.style.fontWeight = 'bold';
+                p.style.borderRadius = '4px';
+            }
             logDiv.appendChild(p);
         });
     }
