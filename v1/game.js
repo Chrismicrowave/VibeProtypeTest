@@ -144,7 +144,7 @@ const TRANSLATIONS = {
         rolled: 'Rolled a',
         landedOn: 'Landed on',
         tile: 'tile',
-        loopCompleted: 'Loop completed! Bonus +50 coins',
+        loopCompleted: 'Loop completed! Bonus +25 coins',
         foundCoins: 'Found',
         coins: 'coins',
         combatStart: 'Combat started against',
@@ -256,7 +256,8 @@ const TRANSLATIONS = {
         buyAndReplace: 'Buy & Replace',
         hpPotion: 'HP Potion',
         spPotion: 'SP Potion',
-        potionFullSold: 'Potion full, sold for'
+        potionFullSold: 'Potion full, sold for',
+        maxPotionsReached: 'Max Potions Reached'
     },
     zh: {
         title: 'Vibing骰子游戏',
@@ -284,7 +285,7 @@ const TRANSLATIONS = {
         rolled: '掷出了',
         landedOn: '降落在',
         tile: '格子',
-        loopCompleted: '完成一圈！奖励 +50 金币',
+        loopCompleted: '完成一圈！奖励 +25 金币',
         foundCoins: '发现了',
         coins: '金币',
         combatStart: '战斗开始，对手是',
@@ -396,7 +397,8 @@ const TRANSLATIONS = {
         buyAndReplace: '购买并替换',
         hpPotion: '生命药水',
         spPotion: '魔法药水',
-        potionFullSold: '药水已满，卖出获得'
+        potionFullSold: '药水已满，卖出获得',
+        maxPotionsReached: '药水已达上限'
     }
 };
 
@@ -509,7 +511,7 @@ class Player {
             atk: 25,
             def: 8,
             crit: 5,
-            money: 100
+            money: 50
         };
         this.inventory = [];
         this.equippedWeapon = null;
@@ -639,7 +641,7 @@ const ITEM_TEMPLATES = {
         { name: 'Magic Staff', emoji: '🪄', stats: { atk: 8 }, price: 90 },
         { name: 'Bow', emoji: '🏹', stats: { atk: 7 }, price: 80 },
     ],
-    armor: [
+    armors: [
         { name: 'Leather Armor', emoji: '🦺', stats: { def: 5 }, price: 50 },
         { name: 'Chain Mail', emoji: '🛡️', stats: { def: 10 }, price: 100 },
         { name: 'Plate Armor', emoji: '🛡️', stats: { def: 10 }, price: 150 },
@@ -666,13 +668,15 @@ function createRandomItem(category, levelScale = 1) {
         scaledStats[stat] = Math.floor(template.stats[stat] * levelScale);
     }
 
+    // Price scales at 80% of stat scaling to keep items more affordable as game progresses
+    const priceScale = 1 + (levelScale - 1) * 0.8;
     const item = new Item(
         category.slice(0, -1), // Remove 's' from category name
         template.name,
         template.emoji,
         scaledStats,
         template.special,
-        Math.floor(template.price * levelScale)
+        Math.floor(template.price * priceScale)
     );
 
     // Generate buffs for the item based on its type
@@ -1026,7 +1030,7 @@ function movePlayer(steps) {
             // Check if completed a loop (32 tiles)
             if (startPosition + steps >= 32) {
                 gameState.player.loops++;
-                gameState.player.gainMoney(50);
+                gameState.player.gainMoney(25);
 
                 // Recover 30% of max HP and SP on loop completion
                 const healAmount = Math.floor(gameState.player.stats.maxHp * 0.3);
@@ -1104,7 +1108,7 @@ function handleTileLanding(tile) {
             // Use round/set scaling for empty tile gold
             const roundScale = ROUND_SCALING[gameState.round] || ROUND_SCALING[5];
             const setMult = getSetMultiplier(gameState.set);
-            const coins = Math.floor((8 + Math.random() * 16) * roundScale.gold * setMult);
+            const coins = Math.floor((3 + Math.random() * 7) * roundScale.gold * setMult);
             gameState.player.gainMoney(coins);
             logEvent(`${t('foundCoins')} ${coins} ${t('coins')}! 💰`);
             break;
@@ -1516,7 +1520,7 @@ function executeCombat() {
         // Use round/set scaling for gold rewards
         const roundScale = ROUND_SCALING[gameState.round] || ROUND_SCALING[5];
         const setMult = getSetMultiplier(gameState.set);
-        const reward = Math.floor((16 + Math.random() * 24) * roundScale.gold * setMult);
+        const reward = Math.floor((8 + Math.random() * 12) * roundScale.gold * setMult);
         gameState.player.gainMoney(reward);
         addLog(`💰 ${t('gained')} ${reward} ${t('coins')}!`);
 
@@ -1758,8 +1762,10 @@ function showLootModal(providedItems = null) {
         const numItems = Math.floor(Math.random() * 3) + 1;
         const levelScale = 1 + (gameState.round - 1) * 0.2 + (gameState.set - 1) * 0.3;
         lootItems = [];
+        // Weighted item pool: weapons 30%, armors 30%, potions 15%, rings 25%
+        const itemPool = ['weapons', 'weapons', 'weapons', 'armors', 'armors', 'armors', 'potions', 'rings', 'rings', 'rings'];
         for (let i = 0; i < numItems; i++) {
-            const itemType = ['weapons', 'armor', 'potions', 'rings'][Math.floor(Math.random() * 4)];
+            const itemType = itemPool[Math.floor(Math.random() * itemPool.length)];
             const item = createRandomItem(itemType, levelScale);
             lootItems.push(item);
         }
@@ -1796,6 +1802,7 @@ function showLootModal(providedItems = null) {
 
             // For potions - Use now or Add to inventory
             if (item.type === 'potion') {
+                const canAddPotion = gameState.player.canAddPotion(item);
                 return `
                     <div class="loot-item-${idx}" style="display: inline-block; margin: 10px; padding: 15px; border: 3px solid #2ecc71; border-radius: 10px; min-width: 180px; background: #f8f9fa;">
                         <div style="font-size: 3em; margin-bottom: 5px;">${item.emoji}</div>
@@ -1805,8 +1812,8 @@ function showLootModal(providedItems = null) {
                             <button class="loot-use-btn-${idx}" style="padding: 8px; background: #2ecc71; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
                                 🧪 ${t('useNow')}
                             </button>
-                            <button class="loot-keep-btn-${idx}" style="padding: 8px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                                🎒 ${t('addToInventory')}
+                            <button class="loot-keep-btn-${idx}" style="padding: 8px; background: ${canAddPotion ? '#667eea' : '#ccc'}; color: white; border: none; border-radius: 5px; cursor: ${canAddPotion ? 'pointer' : 'not-allowed'}; font-weight: bold;" ${canAddPotion ? '' : 'disabled'}>
+                                ${canAddPotion ? `🎒 ${t('addToInventory')}` : `🚫 ${t('maxPotionsReached')}`}
                             </button>
                         </div>
                     </div>
@@ -1932,20 +1939,15 @@ function showLootModal(providedItems = null) {
 
             // Potion: Add to Inventory button
             const keepBtn = content.querySelector(`.loot-keep-btn-${idx}`);
-            if (keepBtn) {
+            if (keepBtn && !keepBtn.disabled) {
                 keepBtn.addEventListener('click', () => {
                     if (gameState.player.canAddPotion(item)) {
                         gameState.player.inventory.push(item);
                         logEvent(`${t('addedToInventory')} ${item.emoji} ${item.name}`);
-                    } else {
-                        // Auto-sell if potion limit reached
-                        const sellPrice = item.sellValue || Math.floor(item.price * 0.6);
-                        gameState.player.gainMoney(sellPrice);
-                        logEvent(`${t('potionFullSold')} ${sellPrice} ${t('coins')}`);
+                        lootItems[idx] = null;
+                        updateInventoryUI();
+                        renderLootUI();
                     }
-                    lootItems[idx] = null;
-                    updateInventoryUI();
-                    renderLootUI();
                 });
             }
 
@@ -2045,7 +2047,7 @@ function openShop() {
     gameState.currentPhase = 'shop';
 
     // Generate 3 random items - use round/set scaling
-    const itemTypes = ['weapons', 'armor', 'potions', 'rings'];
+    const itemTypes = ['weapons', 'armors', 'potions', 'rings'];
     const levelScale = 1 + (gameState.round - 1) * 0.2 + (gameState.set - 1) * 0.3;
     gameState.shopItems = [];
     for (let i = 0; i < 3; i++) {
@@ -2218,14 +2220,16 @@ function openTreasure() {
     // Use round/set scaling for treasure gold
     const roundScale = ROUND_SCALING[gameState.round] || ROUND_SCALING[5];
     const setMult = getSetMultiplier(gameState.set);
-    const coins = Math.floor((24 + Math.random() * 40) * roundScale.gold * setMult);
+    const coins = Math.floor((12 + Math.random() * 18) * roundScale.gold * setMult);
     gameState.player.gainMoney(coins);
     logEvent(`💎 ${t('treasure')}: 💰 ${coins} ${t('coins')}`);
     updateUI();
 
     // 50% chance for item
     if (Math.random() < 0.5) {
-        const itemType = ['weapons', 'armor', 'potions', 'rings'][Math.floor(Math.random() * 4)];
+        // Weighted item pool: weapons 30%, armors 30%, potions 15%, rings 25%
+        const itemPool = ['weapons', 'weapons', 'weapons', 'armors', 'armors', 'armors', 'potions', 'rings', 'rings', 'rings'];
+        const itemType = itemPool[Math.floor(Math.random() * itemPool.length)];
         const levelScale = 1 + (gameState.round - 1) * 0.2 + (gameState.set - 1) * 0.3;
         const item = createRandomItem(itemType, levelScale);
         // Show loot modal for the item
