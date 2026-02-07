@@ -243,6 +243,7 @@ const TRANSLATIONS = {
         use: 'Use',
         sell: 'Sell',
         continueAdventure: 'Sell All Items & Continue',
+        continueOnly: 'Continue Adventure',
         allItemsCollected: 'All items collected!',
         addedToInventory: 'Added',
         toInventory: 'to inventory',
@@ -389,6 +390,7 @@ const TRANSLATIONS = {
         use: '使用',
         sell: '出售',
         continueAdventure: '卖掉所有物品并继续',
+        continueOnly: '继续冒险',
         allItemsCollected: '所有物品已收集！',
         addedToInventory: '添加了',
         toInventory: '到背包',
@@ -513,6 +515,7 @@ const gameState = {
     currentEnemy: null, // Store current enemy for combat
     shopItems: [], // Store current shop items
     eventLogMessages: [], // Store event log messages for re-render
+    pendingSupplyRound: false, // Flag to trigger supply round after shop
     combatState: {
         enemyFrozen: false,
         enemyPoison: { active: false, percent: 0, turnsLeft: 0 },
@@ -742,15 +745,28 @@ function generateBoard() {
             });
         }
     } else {
-        // NORMAL MODE: Standard distribution
-        const tileDistribution = [
-            'shop', 'combat', 'empty', 'combat', 'treasure', 'combat', 'empty', 'combat',
-            'shop', 'combat', 'skillTrainer', 'combat', 'empty', 'combat', 'treasure', 'combat',
-            'shop', 'combat', 'empty', 'combat', 'treasure', 'combat', 'empty', 'combat',
-            'shop', 'combat', 'skillTrainer', 'combat', 'empty', 'combat', 'treasure', 'combat'
+        // NORMAL MODE: Random distribution with weighted tiles
+        // Weights: combat 40%, empty 25%, shop 15%, treasure 12%, skillTrainer 8%
+        const tileWeights = [
+            { type: 'combat', weight: 40 },
+            { type: 'empty', weight: 25 },
+            { type: 'shop', weight: 15 },
+            { type: 'treasure', weight: 12 },
+            { type: 'skillTrainer', weight: 8 }
         ];
+        const totalWeight = tileWeights.reduce((sum, t) => sum + t.weight, 0);
+
+        function getRandomTile() {
+            let rand = Math.random() * totalWeight;
+            for (const tile of tileWeights) {
+                rand -= tile.weight;
+                if (rand <= 0) return tile.type;
+            }
+            return 'empty';
+        }
+
         for (let i = 0; i < 32; i++) {
-            const type = tileDistribution[i];
+            const type = getRandomTile();
             board.push({
                 id: i,
                 type: type,
@@ -1142,10 +1158,28 @@ function movePlayer(steps) {
                     // Normal round progression
                     logEvent(`🎉 ${t('loopCompleted')} +${healAmount} HP, +${spAmount} SP! (${t('round')} ${gameState.round}/5)`);
 
-                    // Check for round 5 -> Supply Round
+                    // Round end rewards: R1=skill, R2=shop, R3=treasure, R4=skill, R5=shop then supply
+                    const roundRewards = {
+                        1: () => setTimeout(() => openSkillTrainer(), TIMING.bossFightDelay),
+                        2: () => setTimeout(() => showShopModal(), TIMING.bossFightDelay),
+                        3: () => setTimeout(() => openTreasure(), TIMING.bossFightDelay),
+                        4: () => setTimeout(() => openSkillTrainer(), TIMING.bossFightDelay),
+                        5: () => setTimeout(() => {
+                            showShopModal();
+                            // After shop closes, start supply round
+                            gameState.pendingSupplyRound = true;
+                        }, TIMING.bossFightDelay)
+                    };
+
+                    // Trigger round end reward
+                    if (roundRewards[gameState.round]) {
+                        roundRewards[gameState.round]();
+                    }
+
+                    // Check for round 5 -> Supply Round (handled after shop modal)
                     if (gameState.round >= 5) {
                         gameState.player.loops = 0;
-                        setTimeout(() => startSupplyRound(), TIMING.bossFightDelay);
+                        // Supply round triggered after shop modal closes
                     } else {
                         // Increment round and regenerate map
                         gameState.round++;
@@ -1315,14 +1349,16 @@ function generateEnemy() {
     // Use round/set scaling instead of level
     const roundScale = ROUND_SCALING[gameState.round] || ROUND_SCALING[5];
     const setMult = getSetMultiplier(gameState.set);
+    // 2x multiplier for rounds 3-5 (harder late rounds)
+    const lateRoundMult = gameState.round >= 3 ? 2.0 : 1.0;
 
     return {
         name: type.name,
         emoji: type.emoji,
-        hp: Math.floor(60 * type.hpMult * roundScale.hp * setMult * DIFFICULTY),
-        maxHp: Math.floor(60 * type.hpMult * roundScale.hp * setMult * DIFFICULTY),
-        atk: Math.floor(20 * type.atkMult * roundScale.atk * setMult * DIFFICULTY),
-        def: Math.floor(5 * roundScale.def * setMult * DIFFICULTY)
+        hp: Math.floor(60 * type.hpMult * roundScale.hp * setMult * lateRoundMult * DIFFICULTY),
+        maxHp: Math.floor(60 * type.hpMult * roundScale.hp * setMult * lateRoundMult * DIFFICULTY),
+        atk: Math.floor(20 * type.atkMult * roundScale.atk * setMult * lateRoundMult * DIFFICULTY),
+        def: Math.floor(5 * roundScale.def * setMult * lateRoundMult * DIFFICULTY)
     };
 }
 
@@ -2013,6 +2049,10 @@ function showLootModal(providedItems = null) {
             return '';
         }).join('');
 
+        // Check if there are equipment items (non-potion) remaining
+        const hasEquipment = remainingItems.some(item => item && item.type !== 'potion');
+        const buttonText = hasEquipment ? t('continueAdventure') : t('continueOnly');
+
         content.innerHTML = `
             <h2 style="text-align: center; margin-bottom: 20px;">🎁 ${t('victoryLoot')} 🎁</h2>
             <p style="text-align: center; margin-bottom: 20px; color: #666;">
@@ -2022,7 +2062,7 @@ function showLootModal(providedItems = null) {
                 ${itemsHTML}
             </div>
             <div class="modal-buttons">
-                <button id="close-loot-btn" class="modal-btn primary">${t('continueAdventure')}</button>
+                <button id="close-loot-btn" class="modal-btn primary">${buttonText}</button>
             </div>
         `;
 
@@ -2264,6 +2304,11 @@ function openShop() {
         document.getElementById('leave-shop-btn').addEventListener('click', () => {
             closeModal();
             gameState.currentPhase = 'playing';
+            // Check if supply round should start after this shop
+            if (gameState.pendingSupplyRound) {
+                gameState.pendingSupplyRound = false;
+                setTimeout(() => startSupplyRound(), TIMING.bossFightDelay);
+            }
         });
     }
 
@@ -2488,13 +2533,13 @@ function startBossFight() {
 // ========================================
 
 function generateSupplyBoard() {
-    // Special board with only shop and treasure tiles
+    // Special board with shop, treasure, and skill trainer tiles
     const board = [];
     const supplyDistribution = [
-        'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure',
-        'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure',
-        'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure',
-        'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure', 'shop', 'treasure'
+        'shop', 'treasure', 'skillTrainer', 'treasure', 'shop', 'treasure', 'skillTrainer', 'treasure',
+        'shop', 'treasure', 'skillTrainer', 'treasure', 'shop', 'treasure', 'skillTrainer', 'treasure',
+        'shop', 'treasure', 'skillTrainer', 'treasure', 'shop', 'treasure', 'skillTrainer', 'treasure',
+        'shop', 'treasure', 'skillTrainer', 'treasure', 'shop', 'treasure', 'skillTrainer', 'treasure'
     ];
 
     for (let i = 0; i < 32; i++) {
@@ -2541,7 +2586,7 @@ function startSupplyRound() {
             </div>
         </div>
         <div class="modal-buttons">
-            <button id="start-supply-btn" class="modal-btn primary">🎲 ${t('continueAdventure')}</button>
+            <button id="start-supply-btn" class="modal-btn primary">🎲 ${t('continueOnly')}</button>
         </div>
     `;
 
@@ -2657,6 +2702,7 @@ function restartGame() {
     gameState.round = 1;
     gameState.set = 1;
     gameState.isSupplyRound = false;
+    gameState.pendingSupplyRound = false;
     gameState.isRolling = false;
     gameState.currentEnemy = null;
     gameState.shopItems = [];
