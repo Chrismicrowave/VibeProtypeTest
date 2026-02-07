@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.0';
+const VERSION = 'v0.1.1';
 
 // Timing Configuration (in milliseconds)
 // Adjust these values to change game speed
