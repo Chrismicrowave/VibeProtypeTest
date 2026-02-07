@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.6-215159';
+const VERSION = 'v0.1.7-220000';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -64,7 +64,7 @@ const SFX = {
     skill: [0,,0.2621,0.3877,0.4228,0.1633,,0.3694,,,,0.5417,0.6073,,,,,,1,,,,,0.5],
 };
 
-let soundEnabled = true;
+let soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
 
 function playSound(sfxName, pitch = 1.0) {
     if (!soundEnabled || !window.jsfxr) return;
@@ -90,6 +90,21 @@ function playSound(sfxName, pitch = 1.0) {
 
         audio.play().catch(() => {}); // Ignore autoplay errors
     } catch (e) {}
+}
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem('soundEnabled', soundEnabled);
+    updateSoundButton();
+}
+
+function updateSoundButton() {
+    const btn = document.getElementById('sound-toggle-btn');
+    if (btn) {
+        btn.innerHTML = soundEnabled ? '🔊' : '🔇';
+        btn.style.background = soundEnabled ? '#28a745' : '#6c757d';
+        btn.title = soundEnabled ? 'Sound on' : 'Sound off';
+    }
 }
 
 // Test Mode Configuration
@@ -1797,7 +1812,7 @@ function executeCombat() {
         // Enemy hurt animation
         setTimeout(() => {
             enemyCombatant.classList.add('hurt');
-            playSound('hit', 1.2); // Player attacks = higher pitch
+            playSound('hit', 1.1); // Player attacks = slightly higher pitch
             enemy.hp -= playerDmg;
 
             if (isCrit) {
@@ -1941,7 +1956,7 @@ function executeCombat() {
 
                         if (enemyDmg > 0) {
                             playerCombatant.classList.add('hurt');
-                            playSound('hit', 0.8); // Enemy attacks = lower pitch
+                            playSound('hit', 1.0); // Enemy attacks = normal pitch
                             const actualDmg = gameState.player.takeDamage(enemyDmg);
                             addLog(`${enemy.emoji} ${enemy.name} ${t('enemyDealt')} ${actualDmg} ${t('damage')}!`);
 
@@ -2199,7 +2214,7 @@ function showLootModal(providedItems = null) {
                             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
                         }
                         gameState.player.equippedWeapon = item;
-                        playSound('equip');
+                        playSound('equip', 0.8);
                         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
                     } else if (item.type === 'armor') {
                         if (gameState.player.equippedArmor) {
@@ -2209,7 +2224,7 @@ function showLootModal(providedItems = null) {
                             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
                         }
                         gameState.player.equippedArmor = item;
-                        playSound('equip');
+                        playSound('equip', 0.8);
                         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
                     } else if (item.type === 'ring') {
                         if (gameState.player.equippedRing) {
@@ -2219,7 +2234,7 @@ function showLootModal(providedItems = null) {
                             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
                         }
                         gameState.player.equippedRing = item;
-                        playSound('equip');
+                        playSound('equip', 0.8);
                         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
                     }
                     lootItems[idx] = null;
@@ -2430,7 +2445,7 @@ function buyItem(index) {
             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
         gameState.player.equippedWeapon = item;
-        playSound('equip');
+        playSound('equip', 0.8);
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
     } else if (item.type === 'armor') {
         if (gameState.player.equippedArmor) {
@@ -2440,7 +2455,7 @@ function buyItem(index) {
             logEvent(`${t('sold')} ${oldItem.emoji} ${oldItem.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
         gameState.player.equippedArmor = item;
-        playSound('equip');
+        playSound('equip', 0.8);
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
     } else if (item.type === 'ring') {
         if (gameState.player.equippedRing) {
@@ -2450,7 +2465,7 @@ function buyItem(index) {
             logEvent(`${t('sold')} ${oldRing.emoji} ${oldRing.name} ${t('for')} ${oldSellPrice} ${t('coins')}`);
         }
         gameState.player.equippedRing = item;
-        playSound('equip');
+        playSound('equip', 0.8);
         logEvent(`${t('equipped')} ${item.emoji} ${item.name}`);
     }
 
@@ -2876,6 +2891,7 @@ function initGame() {
     gameState.board = generateBoard();
 
     updateLanguageUI();
+    updateSoundButton();
     renderBoard();
     updateUI();
     updateInventoryUI();
