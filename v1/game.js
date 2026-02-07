@@ -32,6 +32,26 @@ const TEST_MODE = {
     tileTypes: ['shop', 'combat'] // Only these tile types in test mode
 };
 
+// Combat Configuration
+const CRIT_MULTIPLIER = 2.0;
+
+// Buff Configuration
+const BUFF_CONFIG = {
+    LIFESTEAL: { type: 'attack', emoji: '🧛', minValue: 5, maxValue: 25 },
+    FREEZE: { type: 'attack', emoji: '❄️', minValue: 10, maxValue: 30, duration: 1 },
+    POISON: { type: 'attack', emoji: '☠️', minValue: 5, maxValue: 25, duration: 3 },
+    AUTO_BLOCK: { type: 'defense', emoji: '🛡️', minValue: 5, maxValue: 20 },
+    REFLECT: { type: 'defense', emoji: '↩️', minValue: 10, maxValue: 50 }
+};
+
+// Item buff rules: which buffs allowed per item type
+const ITEM_BUFF_RULES = {
+    weapon: { allowed: ['LIFESTEAL', 'FREEZE', 'POISON'], maxBuffs: 3 },
+    armor: { allowed: ['AUTO_BLOCK', 'REFLECT'], maxBuffs: 3 },
+    ring: { allowed: ['LIFESTEAL'], maxBuffs: 3 },
+    potion: { allowed: [], maxBuffs: 0 }
+};
+
 // Language System
 let currentLanguage = localStorage.getItem('gameLanguage') || 'en';
 
@@ -124,7 +144,7 @@ const TRANSLATIONS = {
         ATK: 'ATK',
         DEF: 'DEF',
         SP: 'SP',
-        LUK: 'LUK',
+        CRIT: 'CRIT',
         useNow: 'Use Now',
         addToInventory: 'Add to Inventory',
         clickToUse: 'Click to use',
@@ -223,7 +243,7 @@ const TRANSLATIONS = {
         ATK: '攻击',
         DEF: '防御',
         SP: '法力',
-        LUK: '幸运',
+        CRIT: '暴击',
         useNow: '立即使用',
         addToInventory: '添加到背包',
         clickToUse: '点击使用',
@@ -333,7 +353,7 @@ class Player {
             maxSp: 50,
             atk: 25,
             def: 8,
-            luk: 5,
+            crit: 5,
             money: 100
         };
         this.inventory = [];
@@ -451,7 +471,7 @@ const ITEM_TEMPLATES = {
     rings: [
         { name: 'Ring of Strength', emoji: '💍', stats: { atk: 3 }, price: 80 },
         { name: 'Ring of Defense', emoji: '💍', stats: { def: 3 }, price: 80 },
-        { name: 'Lucky Ring', emoji: '💍', stats: { luk: 5 }, price: 100 },
+        { name: 'Lucky Ring', emoji: '💍', stats: { crit: 5 }, price: 100 },
         { name: 'Vampire Ring', emoji: '💍', stats: {}, special: { effect: 'lifesteal', value: 0.2 }, price: 120 },
     ]
 };
@@ -616,7 +636,7 @@ function updateUI() {
 
     document.getElementById('atk-value').textContent = p.getTotalAtk();
     document.getElementById('def-value').textContent = p.getTotalDef();
-    document.getElementById('luk-value').textContent = p.stats.luk;
+    document.getElementById('crit-value').textContent = p.stats.crit;
     document.getElementById('money-value').textContent = p.stats.money;
 
     // Update game info
@@ -1060,7 +1080,7 @@ function showLootModal(providedItems = null) {
         if (item.stats.def) parts.push(`🛡️ ${t('DEF')} +${item.stats.def}`);
         if (item.stats.hp) parts.push(`❤️ ${t('HP')} +${item.stats.hp}`);
         if (item.stats.sp) parts.push(`💙 ${t('SP')} +${item.stats.sp}`);
-        if (item.stats.luk) parts.push(`🍀 ${t('LUK')} +${item.stats.luk}`);
+        if (item.stats.crit) parts.push(`⚡ ${t('CRIT')} +${item.stats.crit}`);
         if (item.special) parts.push(`✨ ${item.special.effect}`);
         return parts.join(' | ');
     }
@@ -1341,7 +1361,7 @@ function openShop() {
         if (item.stats.def) parts.push(`🛡️ DEF +${item.stats.def}`);
         if (item.stats.hp) parts.push(`❤️ HP +${item.stats.hp}`);
         if (item.stats.sp) parts.push(`💙 SP +${item.stats.sp}`);
-        if (item.stats.luk) parts.push(`🍀 LUK +${item.stats.luk}`);
+        if (item.stats.crit) parts.push(`⚡ CRIT +${item.stats.crit}`);
         if (item.special) parts.push(`✨ ${item.special.effect}`);
         return parts.join(' | ');
     }
