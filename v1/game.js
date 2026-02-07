@@ -1599,6 +1599,7 @@ function executeCombat() {
                     if (!gameState.combatState.enemyFrozen && Math.random() * 100 < buff.value) {
                         gameState.combatState.enemyFrozen = true;
                         addLog(`❄️ ${enemy.name} ${t('frozen')}`);
+                        updateBuffDisplay();
                     }
                 } else if (buff.type === 'POISON') {
                     if (!gameState.combatState.enemyPoison.active && Math.random() * 100 < buff.value) {
@@ -1608,6 +1609,7 @@ function executeCombat() {
                             turnsLeft: 3
                         };
                         addLog(`☠️ ${enemy.name} ${t('poisoned')}`);
+                        updateBuffDisplay();
                     }
                 }
             }
