@@ -2,6 +2,8 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
+const VERSION = 'v0.1.0';
+
 // Timing Configuration (in milliseconds)
 // Adjust these values to change game speed
 const TIMING = {
@@ -116,7 +118,7 @@ let currentLanguage = localStorage.getItem('gameLanguage') || 'en';
 
 const TRANSLATIONS = {
     en: {
-        title: 'Dice Board Game V1',
+        title: 'VibingDiceGame',
         level: 'Level',
         bossesDefeated: 'Bosses Defeated',
         loop: 'Loop',
@@ -253,7 +255,7 @@ const TRANSLATIONS = {
         buyAndReplace: 'Buy & Replace'
     },
     zh: {
-        title: '骰子棋盘游戏 V1',
+        title: 'Vibing骰子游戏',
         level: '等级',
         bossesDefeated: '已击败Boss',
         loop: '回合',
@@ -406,7 +408,7 @@ function switchLanguage() {
 }
 
 function updateLanguageUI() {
-    document.querySelector('header h1').textContent = `🎲 ${t('title')} 🔥💧🌿`;
+    document.querySelector('header h1').textContent = `🎲 ${t('title')} ${VERSION}`;
     const roundDisplay = gameState.isSupplyRound ? t('supplyRound') : `${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`;
     document.getElementById('game-info').innerHTML = `
         <span>${t('level')}: <span id="level-display">${gameState.level}</span></span>
