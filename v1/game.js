@@ -958,7 +958,7 @@ function formatItemStats(item) {
         });
     }
 
-    return parts.join(' | ');
+    return parts.join('\n');
 }
 
 function formatBuffsOnly(item) {
@@ -970,7 +970,7 @@ function formatBuffsOnly(item) {
         return text;
     });
 
-    return buffTexts.join(' | ');
+    return buffTexts.join('\n');
 }
 
 // ========================================
