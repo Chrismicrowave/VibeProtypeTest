@@ -486,6 +486,7 @@ const gameState = {
     isRolling: false,
     currentEnemy: null, // Store current enemy for combat
     shopItems: [], // Store current shop items
+    eventLogMessages: [], // Store event log messages for re-render
     combatState: {
         enemyFrozen: false,
         enemyPoison: { active: false, percent: 0, turnsLeft: 0 },
@@ -731,19 +732,27 @@ function renderBoard() {
     const boardElement = document.getElementById('game-board');
     boardElement.innerHTML = '';
 
-    // Add center panel (for large dice display during roll)
+    // Add center panel (event log + dice display)
     const centerPanel = document.createElement('div');
     centerPanel.id = 'board-center';
     centerPanel.style.gridRow = '2 / 9';
     centerPanel.style.gridColumn = '2 / 9';
     centerPanel.style.display = 'flex';
+    centerPanel.style.flexDirection = 'column';
     centerPanel.style.alignItems = 'center';
     centerPanel.style.justifyContent = 'center';
+    centerPanel.style.padding = '15px';
+    centerPanel.style.background = 'rgba(255, 255, 255, 0.95)';
+    centerPanel.style.borderRadius = '15px';
     centerPanel.style.zIndex = '10';
     centerPanel.innerHTML = `
-        <div id="center-big-dice" style="font-size: 10em; font-weight: bold; color: #667eea; text-shadow: 0 4px 8px rgba(0,0,0,0.3); display: none;"></div>
+        <div id="center-big-dice" style="font-size: 6em; font-weight: bold; color: #667eea; text-shadow: 0 4px 8px rgba(0,0,0,0.3); display: none; position: absolute;"></div>
+        <div id="event-log" style="background: #f8f9fa; padding: 10px; border-radius: 8px; width: 100%; max-height: 180px; overflow-y: auto; font-size: 0.85em;"></div>
     `;
     boardElement.appendChild(centerPanel);
+
+    // Restore event log messages
+    restoreEventLog();
 
     gameState.board.forEach((tile, index) => {
         const tileDiv = document.createElement('div');
@@ -912,33 +921,41 @@ function updateInventoryUI() {
 }
 
 function logEvent(message) {
-    // Log to center board log
-    const centerLog = document.getElementById('event-log');
-    if (centerLog) {
+    // Store message for re-render
+    gameState.eventLogMessages.unshift(message);
+    if (gameState.eventLogMessages.length > 8) {
+        gameState.eventLogMessages.pop();
+    }
+
+    // Add to DOM
+    const logDiv = document.getElementById('event-log');
+    if (logDiv) {
         const p = document.createElement('p');
         p.textContent = message;
         p.style.marginBottom = '5px';
         p.style.paddingLeft = '5px';
         p.style.borderLeft = '3px solid #667eea';
-        centerLog.insertBefore(p, centerLog.firstChild);
-
-        // Keep only last 8 messages
-        while (centerLog.children.length > 8) {
-            centerLog.removeChild(centerLog.lastChild);
-        }
-    }
-
-    // Also log to side panel if it exists
-    const logDiv = document.getElementById('event-log');
-    if (logDiv) {
-        const p = document.createElement('p');
-        p.textContent = message;
         logDiv.insertBefore(p, logDiv.firstChild);
 
-        // Keep only last 10 messages
-        while (logDiv.children.length > 10) {
+        // Keep only last 8 messages in DOM
+        while (logDiv.children.length > 8) {
             logDiv.removeChild(logDiv.lastChild);
         }
+    }
+}
+
+function restoreEventLog() {
+    const logDiv = document.getElementById('event-log');
+    if (logDiv && gameState.eventLogMessages.length > 0) {
+        logDiv.innerHTML = '';
+        gameState.eventLogMessages.forEach(msg => {
+            const p = document.createElement('p');
+            p.textContent = msg;
+            p.style.marginBottom = '5px';
+            p.style.paddingLeft = '5px';
+            p.style.borderLeft = '3px solid #667eea';
+            logDiv.appendChild(p);
+        });
     }
 }
 
