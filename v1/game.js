@@ -446,9 +446,37 @@ class Item {
         this.emoji = emoji;
         this.stats = stats;
         this.special = special;
+        this.buffs = [];  // Array for combat buffs
         this.price = price;
         this.sellValue = Math.floor(price * 0.6);
     }
+}
+
+function generateItemBuffs(itemType, levelScale = 1) {
+    const rules = ITEM_BUFF_RULES[itemType];
+    if (!rules || rules.maxBuffs === 0) return [];
+
+    const buffs = [];
+    const numBuffs = Math.floor(Math.random() * (rules.maxBuffs + 1)); // 0 to maxBuffs
+    const availableBuffs = [...rules.allowed];
+
+    for (let i = 0; i < numBuffs && availableBuffs.length > 0; i++) {
+        const buffIndex = Math.floor(Math.random() * availableBuffs.length);
+        const buffType = availableBuffs.splice(buffIndex, 1)[0];
+        const config = BUFF_CONFIG[buffType];
+
+        const baseValue = config.minValue + Math.random() * (config.maxValue - config.minValue);
+        const scaledValue = Math.min(config.maxValue, Math.floor(baseValue * (0.8 + levelScale * 0.2)));
+
+        buffs.push({
+            type: buffType,
+            emoji: config.emoji,
+            value: scaledValue,
+            duration: config.duration || 0
+        });
+    }
+
+    return buffs;
 }
 
 const ITEM_TEMPLATES = {
@@ -485,7 +513,7 @@ function createRandomItem(category, levelScale = 1) {
         scaledStats[stat] = Math.floor(template.stats[stat] * levelScale);
     }
 
-    return new Item(
+    const item = new Item(
         category.slice(0, -1), // Remove 's' from category name
         template.name,
         template.emoji,
@@ -493,6 +521,11 @@ function createRandomItem(category, levelScale = 1) {
         template.special,
         Math.floor(template.price * levelScale)
     );
+
+    // Generate buffs for the item based on its type
+    item.buffs = generateItemBuffs(item.type, levelScale);
+
+    return item;
 }
 
 // ========================================
