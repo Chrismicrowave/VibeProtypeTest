@@ -4,6 +4,10 @@
 
 const VERSION = 'v0.1.1';
 
+// Difficulty Scaling - affects enemies, items, and buffs
+// 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
+const DIFFICULTY = 1.5;
+
 // Timing Configuration (in milliseconds)
 // Adjust these values to change game speed
 const TIMING = {
@@ -630,7 +634,7 @@ function generateItemBuffs(itemType, levelScale = 1) {
         const config = BUFF_CONFIG[buffType];
 
         const baseValue = config.minValue + Math.random() * (config.maxValue - config.minValue);
-        const scaledValue = Math.min(config.maxValue, Math.floor(baseValue * (0.8 + levelScale * 0.2)));
+        const scaledValue = Math.min(config.maxValue * DIFFICULTY, Math.floor(baseValue * (0.8 + levelScale * 0.2) * DIFFICULTY));
 
         buffs.push({
             type: buffType,
@@ -674,7 +678,7 @@ function createRandomItem(category, levelScale = 1) {
 
     const scaledStats = {};
     for (let stat in template.stats) {
-        scaledStats[stat] = Math.floor(template.stats[stat] * levelScale);
+        scaledStats[stat] = Math.floor(template.stats[stat] * levelScale * DIFFICULTY);
     }
 
     // Price scales at 80% of stat scaling to keep items more affordable as game progresses
@@ -1258,10 +1262,10 @@ function generateEnemy() {
     return {
         name: type.name,
         emoji: type.emoji,
-        hp: Math.floor(60 * type.hpMult * roundScale.hp * setMult),
-        maxHp: Math.floor(60 * type.hpMult * roundScale.hp * setMult),
-        atk: Math.floor(20 * type.atkMult * roundScale.atk * setMult),
-        def: Math.floor(5 * roundScale.def * setMult)
+        hp: Math.floor(60 * type.hpMult * roundScale.hp * setMult * DIFFICULTY),
+        maxHp: Math.floor(60 * type.hpMult * roundScale.hp * setMult * DIFFICULTY),
+        atk: Math.floor(20 * type.atkMult * roundScale.atk * setMult * DIFFICULTY),
+        def: Math.floor(5 * roundScale.def * setMult * DIFFICULTY)
     };
 }
 
