@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.4-205240';
+const VERSION = 'v0.1.5-210911';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
