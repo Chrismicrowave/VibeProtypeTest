@@ -198,10 +198,6 @@ main {
     font-size: 0.8em;
 }
 
-.tile.active .tile-number {
-    display: none;
-}
-
 @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
