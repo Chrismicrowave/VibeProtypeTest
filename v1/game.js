@@ -1152,8 +1152,9 @@ function showCombatModal(enemy) {
 
     const skill = gameState.player.equippedSkill;
     const skillConfig = skill ? SKILL_CONFIG[skill.type] : null;
-    const skillBtnText = skill ? `${skillConfig.emoji} ${skillConfig.name} (${t('skillLevel')}${skill.level}) - 15 SP` : t('noSkillEquipped');
-    const skillBtnDisabled = !skill || gameState.player.stats.sp < 15;
+    const spCost = skillConfig ? skillConfig.spCost : 0;
+    const skillBtnText = skill ? `${skillConfig.emoji} ${skillConfig.name} (${t('skillLevel')}${skill.level}) - ${spCost} SP` : t('noSkillEquipped');
+    const skillBtnDisabled = !skill || gameState.player.stats.sp < spCost;
 
     content.innerHTML = `
         <h2 style="text-align: center; margin-bottom: 10px;">⚔️ ${t('battleStart')} ⚔️</h2>
@@ -1262,7 +1263,9 @@ function executeCombat() {
     function updateSkillButton() {
         const btn = document.getElementById('use-skill-btn');
         if (!btn) return;
-        const canUse = gameState.player.equippedSkill && gameState.player.stats.sp >= 15;
+        const skill = gameState.player.equippedSkill;
+        const spCost = skill ? SKILL_CONFIG[skill.type].spCost : 0;
+        const canUse = skill && gameState.player.stats.sp >= spCost;
         btn.disabled = !canUse;
         btn.style.background = canUse ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#ccc';
         btn.style.cursor = canUse ? 'pointer' : 'not-allowed';
@@ -1276,10 +1279,10 @@ function executeCombat() {
 
     function useSkill() {
         const skill = gameState.player.equippedSkill;
-        if (!skill || gameState.player.stats.sp < 15) return;
+        const config = skill ? SKILL_CONFIG[skill.type] : null;
+        if (!skill || !config || gameState.player.stats.sp < config.spCost) return;
 
-        gameState.player.stats.sp -= 15;
-        const config = SKILL_CONFIG[skill.type];
+        gameState.player.stats.sp -= config.spCost;
 
         switch (skill.type) {
             case 'HEALING':
@@ -2173,16 +2176,7 @@ function unequipArmor() {
     }
 }
 
-function unequipRing(ringIndex) {
-    if (gameState.player.equippedRings[ringIndex]) {
-        const ring = gameState.player.equippedRings[ringIndex];
-        gameState.player.inventory.push(ring);
-        logEvent(`${t('unequipped')} ${ring.emoji} ${ring.name}`);
-        gameState.player.equippedRings.splice(ringIndex, 1);
-        updateInventoryUI();
-        updateUI();
-    }
-}
+// unequipRing removed - single ring slot, equipment only replaced via loot/shop
 
 function sellItem(index) {
     const item = gameState.player.inventory[index];
