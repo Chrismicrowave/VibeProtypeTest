@@ -2,6 +2,36 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
+// Timing Configuration (in milliseconds)
+// Adjust these values to change game speed
+const TIMING = {
+    // Dice Roll
+    diceRollInterval: 40,       // Speed of dice animation
+    diceResultDelay: 400,       // Delay after showing result
+
+    // Movement
+    moveStepInterval: 300,      // Time between each step
+    tileLandingDelay: 300,      // Delay before tile event triggers
+    bossFightDelay: 1000,       // Delay before boss fight starts
+
+    // Combat
+    combatStartDelay: 20,       // Delay before combat begins
+    combatTurnInterval: 1400,   // Time between turns
+    attackAnimation: 300,       // Attack animation duration
+    hurtAnimation: 300,         // Hurt animation duration
+    enemyHurtDelay: 200,        // Delay before enemy takes damage
+    enemyTurnDelay: 400,        // Delay before enemy attacks
+    playerHurtDelay: 200,       // Delay before player takes damage
+    victoryDelay: 1000,         // Delay after victory before loot
+    defeatDelay: 1000,          // Delay after defeat before game over
+};
+
+// Test Mode Configuration
+const TEST_MODE = {
+    enabled: true,              // Set to false for normal gameplay
+    tileTypes: ['shop', 'combat'] // Only these tile types in test mode
+};
+
 // Language System
 let currentLanguage = localStorage.getItem('gameLanguage') || 'en';
 
@@ -333,7 +363,7 @@ class Player {
             // Check for boss fight
             if (this.loops >= 5) {
                 this.loops = 0;
-                setTimeout(() => startBossFight(), 1000);
+                setTimeout(() => startBossFight(), TIMING.bossFightDelay);
             }
         }
 
@@ -452,14 +482,32 @@ function createRandomItem(category, levelScale = 1) {
 function generateBoard() {
     const board = [];
 
-    // TEST MODE: Only shop and combat tiles
-    for (let i = 0; i < 32; i++) {
-        const type = i % 2 === 0 ? 'shop' : 'combat';
-        board.push({
-            id: i,
-            type: type,
-            emoji: TILE_EMOJIS[type]
-        });
+    if (TEST_MODE.enabled) {
+        // TEST MODE: Only specified tile types
+        for (let i = 0; i < 32; i++) {
+            const type = TEST_MODE.tileTypes[i % TEST_MODE.tileTypes.length];
+            board.push({
+                id: i,
+                type: type,
+                emoji: TILE_EMOJIS[type]
+            });
+        }
+    } else {
+        // NORMAL MODE: Standard distribution
+        const tileDistribution = [
+            'shop', 'combat', 'empty', 'combat', 'treasure', 'combat', 'empty', 'combat',
+            'shop', 'combat', 'skillTrainer', 'combat', 'empty', 'combat', 'treasure', 'combat',
+            'shop', 'combat', 'empty', 'combat', 'treasure', 'combat', 'empty', 'combat',
+            'shop', 'combat', 'skillTrainer', 'combat', 'empty', 'combat', 'treasure', 'combat'
+        ];
+        for (let i = 0; i < 32; i++) {
+            const type = tileDistribution[i];
+            board.push({
+                id: i,
+                type: type,
+                emoji: TILE_EMOJIS[type]
+            });
+        }
     }
 
     return board;
@@ -721,9 +769,9 @@ function rollDice() {
                     centerDiceNumber.style.fontSize = '4em';
                 }
                 movePlayer(finalRoll);
-            }, 400);
+            }, TIMING.diceResultDelay);
         }
-    }, 40);
+    }, TIMING.diceRollInterval);
 }
 
 function movePlayer(steps) {
@@ -755,7 +803,7 @@ function movePlayer(steps) {
                 // Check for boss fight
                 if (gameState.player.loops >= 5) {
                     gameState.player.loops = 0;
-                    setTimeout(() => startBossFight(), 1000);
+                    setTimeout(() => startBossFight(), TIMING.bossFightDelay);
                 }
             }
 
@@ -778,9 +826,9 @@ function movePlayer(steps) {
 
                 const centerRollBtn = document.getElementById('center-roll-btn');
                 if (centerRollBtn) centerRollBtn.disabled = false;
-            }, 300);
+            }, TIMING.tileLandingDelay);
         }
-    }, 300);
+    }, TIMING.moveStepInterval);
 }
 
 function handleTileLanding(tile) {
@@ -882,7 +930,7 @@ function showCombatModal(enemy) {
     // Start combat automatically after a short delay
     setTimeout(() => {
         executeCombat();
-    }, 20);
+    }, TIMING.combatStartDelay);
 }
 
 function executeCombat() {
@@ -907,7 +955,7 @@ function executeCombat() {
         playerCombatant.classList.add('attacking-left');
         setTimeout(() => {
             playerCombatant.classList.remove('attacking-left');
-        }, 300);
+        }, TIMING.attackAnimation);
 
         const playerDmg = Math.max(1, Math.floor(
             (gameState.player.getTotalAtk() - enemy.def) * (0.8 + Math.random() * 0.4)
@@ -926,7 +974,7 @@ function executeCombat() {
 
             setTimeout(() => {
                 enemyCombatant.classList.remove('hurt');
-            }, 300);
+            }, TIMING.hurtAnimation);
 
             if (enemy.hp <= 0) {
                 clearInterval(combatInterval);
@@ -938,7 +986,7 @@ function executeCombat() {
 
                 setTimeout(() => {
                     showLootModal();
-                }, 1000);
+                }, TIMING.victoryDelay);
                 return;
             }
 
@@ -947,7 +995,7 @@ function executeCombat() {
                 enemyCombatant.classList.add('attacking-right');
                 setTimeout(() => {
                     enemyCombatant.classList.remove('attacking-right');
-                }, 300);
+                }, TIMING.attackAnimation);
 
                 const enemyDmg = Math.max(1, Math.floor(
                     (enemy.atk - gameState.player.getTotalDef()) * (0.8 + Math.random() * 0.4)
@@ -967,7 +1015,7 @@ function executeCombat() {
 
                     setTimeout(() => {
                         playerCombatant.classList.remove('hurt');
-                    }, 300);
+                    }, TIMING.hurtAnimation);
 
                     if (gameState.player.stats.hp <= 0) {
                         clearInterval(combatInterval);
@@ -976,13 +1024,13 @@ function executeCombat() {
                         setTimeout(() => {
                             closeModal();
                             gameOver();
-                        }, 1000);
+                        }, TIMING.defeatDelay);
                     }
-                }, 200);
-            }, 400);
-        }, 200);
+                }, TIMING.playerHurtDelay);
+            }, TIMING.enemyTurnDelay);
+        }, TIMING.enemyHurtDelay);
 
-    }, 1400);
+    }, TIMING.combatTurnInterval);
 }
 
 function showLootModal(providedItems = null) {
