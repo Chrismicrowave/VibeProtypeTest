@@ -181,9 +181,14 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2em;
+    font-size: 2.5em;
     animation: bounce 0.5s ease-in-out;
     z-index: 10;
+}
+
+.tile.active {
+    background: linear-gradient(135deg, #ffd700, #ffec80) !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
 }
 
 @keyframes bounce {
@@ -789,7 +794,7 @@ main {
     }
 
     .player-marker {
-        font-size: 0.9em;
+        font-size: 2.5em;
     }
 
     /* Center panel mobile fixes */
@@ -900,6 +905,10 @@ main {
 
     .tile-emoji {
         font-size: 1.8em;
+    }
+
+    .player-marker {
+        font-size: 2.2em;
     }
 
     .tile-number {
