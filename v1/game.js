@@ -737,13 +737,11 @@ function renderBoard() {
     centerPanel.style.gridRow = '2 / 9';
     centerPanel.style.gridColumn = '2 / 9';
     centerPanel.style.display = 'flex';
-    centerPanel.style.flexDirection = 'column';
     centerPanel.style.alignItems = 'center';
     centerPanel.style.justifyContent = 'center';
-    centerPanel.style.background = 'rgba(255, 255, 255, 0.9)';
-    centerPanel.style.borderRadius = '15px';
+    centerPanel.style.zIndex = '10';
     centerPanel.innerHTML = `
-        <div id="center-big-dice" style="font-size: 8em; display: none;">🎲</div>
+        <div id="center-big-dice" style="font-size: 10em; font-weight: bold; color: #667eea; text-shadow: 0 4px 8px rgba(0,0,0,0.3); display: none;"></div>
     `;
     boardElement.appendChild(centerPanel);
 
