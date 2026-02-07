@@ -2,7 +2,7 @@
 // GAME STATE & CONSTANTS
 // ========================================
 
-const VERSION = 'v0.1.9-142100';
+const VERSION = 'v0.1.10-221358';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
@@ -197,6 +197,18 @@ const SKILL_CONFIG = {
         baseAbsorb: 75,         // Absorb up to 75 damage
         upgradeBonus: 20,       // +20 absorb per level
         description: 'Block all damage'
+    },
+    REVIVE: {
+        name: 'Revive',
+        emoji: '💫',
+        type: 'passive',
+        spCost: 0,
+        passive: true,
+        baseHealPercent: 30,    // 30% of max HP on revive
+        baseCooldown: 5,        // 5 rounds cooldown at level 1
+        upgradeBonus: 1,        // -1 round cooldown per level (min 2)
+        maxLevel: 4,            // Max level 4 (2 rounds CD)
+        description: 'Auto-revive on death'
     }
 };
 
@@ -269,10 +281,15 @@ const TRANSLATIONS = {
         skillClone: 'Clone',
         skillExplosion: 'Explosion',
         skillShelves: 'Shelves',
+        skillRevive: 'Revive',
         skillDescHealing: 'Heal % of max HP',
         skillDescClone: 'Summon clone to attack',
         skillDescExplosion: 'Deal fixed damage',
         skillDescShelves: 'Block all damage',
+        skillDescRevive: 'Auto-revive on death',
+        reviveTriggered: 'Revive triggered! Restored',
+        reviveCooldown: 'Revive cooldown',
+        rounds: 'rounds',
         useSkill: 'Use Skill',
         notEnoughSP: 'Not enough SP!',
         noSkillEquipped: 'No skill equipped!',
@@ -416,10 +433,15 @@ const TRANSLATIONS = {
         skillClone: '分身',
         skillExplosion: '爆炸',
         skillShelves: '护盾',
+        skillRevive: '复活',
         skillDescHealing: '恢复最大生命值的百分比',
         skillDescClone: '召唤分身进行攻击',
         skillDescExplosion: '造成固定伤害',
         skillDescShelves: '格挡所有伤害',
+        skillDescRevive: '死亡时自动复活',
+        reviveTriggered: '复活触发！恢复了',
+        reviveCooldown: '复活冷却',
+        rounds: '轮',
         useSkill: '使用技能',
         notEnoughSP: 'SP不足！',
         noSkillEquipped: '未装备技能！',
@@ -597,7 +619,8 @@ const gameState = {
         // Skill effects
         cloneActive: { active: false, turnsLeft: 0 },
         shelvesActive: { active: false, turnsLeft: 0, absorbLeft: 0 }
-    }
+    },
+    reviveCooldown: 0  // Rounds until revive is available again (0 = ready)
 };
 
 // ========================================
@@ -623,6 +646,7 @@ class Player {
         this.equippedArmor = null;
         this.equippedRing = null;
         this.equippedSkill = null;  // { type: 'HEALING', level: 1 }
+        this.passiveSkill = null;   // { type: 'REVIVE', level: 1 }
         this.passiveBuffs = [];
         this.persistedItem = null; // Item carried over from previous game
     }
@@ -987,6 +1011,50 @@ function updateUI() {
             activeSkillsList.innerHTML = `<p class="empty-text">${t('noActiveSkills')}</p>`;
         }
     }
+
+    // Update passive skills display
+    updatePassiveSkillsUI();
+}
+
+function updatePassiveSkillsUI() {
+    const passiveSkillsList = document.getElementById('passive-skills-list');
+    if (passiveSkillsList) {
+        const passiveSkill = gameState.player.passiveSkill;
+        if (passiveSkill) {
+            const config = SKILL_CONFIG[passiveSkill.type];
+            const skillName = t(SKILL_TRANSLATION_KEY[passiveSkill.type]);
+            const cooldown = gameState.reviveCooldown;
+
+            let cooldownText = '';
+            if (passiveSkill.type === 'REVIVE') {
+                if (cooldown > 0) {
+                    cooldownText = `<span style="color: #e74c3c;">⏳ ${cooldown} ${t('rounds')}</span>`;
+                } else {
+                    cooldownText = `<span style="color: #27ae60;">✓ Ready</span>`;
+                }
+            }
+
+            // Calculate cooldown info for display
+            const baseCooldown = config.baseCooldown;
+            const levelReduction = (passiveSkill.level - 1) * config.upgradeBonus;
+            const effectiveCooldown = Math.max(2, baseCooldown - levelReduction);
+
+            passiveSkillsList.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: linear-gradient(135deg, #f39c1222, #e74c3c22); border-radius: 8px;">
+                    <span style="font-size: 1.5em;">${config.emoji}</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold;">${skillName}</div>
+                        <div style="font-size: 0.8em; color: #666;">${t('skillLevel')}${passiveSkill.level} | CD: ${effectiveCooldown} ${t('rounds')}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        ${cooldownText}
+                    </div>
+                </div>
+            `;
+        } else {
+            passiveSkillsList.innerHTML = `<p class="empty-text">${t('noPassiveSkills')}</p>`;
+        }
+    }
 }
 
 function updateInventoryUI() {
@@ -1240,6 +1308,15 @@ function movePlayer(steps) {
                     gameState.round = 1;
                     gameState.player.loops = 0;
                     gameState.board = generateBoard(); // Generate normal board
+
+                    // Decrement revive cooldown if active (new round started)
+                    if (gameState.reviveCooldown > 0) {
+                        gameState.reviveCooldown--;
+                        if (gameState.reviveCooldown === 0 && gameState.player.passiveSkill && gameState.player.passiveSkill.type === 'REVIVE') {
+                            logEvent(`💫 ${t('skillRevive')} ready!`);
+                        }
+                    }
+
                     renderBoard();
                     logEvent(`🎉 ${t('set')} ${gameState.set} ${t('round')} 1!`);
                 } else {
@@ -1273,6 +1350,15 @@ function movePlayer(steps) {
                         gameState.round++;
                         gameState.player.loops = 0;
                         gameState.board = generateBoard();
+
+                        // Decrement revive cooldown if active
+                        if (gameState.reviveCooldown > 0) {
+                            gameState.reviveCooldown--;
+                            if (gameState.reviveCooldown === 0 && gameState.player.passiveSkill && gameState.player.passiveSkill.type === 'REVIVE') {
+                                logEvent(`💫 ${t('skillRevive')} ready!`);
+                            }
+                        }
+
                         logEvent(`📈 ${t('round')} ${gameState.round} / ${t('set')} ${gameState.set}`);
                     }
                 }
@@ -1360,7 +1446,8 @@ const SKILL_TRANSLATION_KEY = {
     'HEALING': 'skillHealing',
     'CLONE': 'skillClone',
     'EXPLOSION': 'skillExplosion',
-    'SHELVES': 'skillShelves'
+    'SHELVES': 'skillShelves',
+    'REVIVE': 'skillRevive'
 };
 
 // Map skill type to description translation key
@@ -1368,7 +1455,8 @@ const SKILL_DESC_KEY = {
     'HEALING': 'skillDescHealing',
     'CLONE': 'skillDescClone',
     'EXPLOSION': 'skillDescExplosion',
-    'SHELVES': 'skillDescShelves'
+    'SHELVES': 'skillDescShelves',
+    'REVIVE': 'skillDescRevive'
 };
 
 function formatItemStats(item) {
@@ -1774,6 +1862,32 @@ function executeCombat() {
     }
 
     function handleDefeat() {
+        // Check for revive passive skill
+        const passiveSkill = gameState.player.passiveSkill;
+        if (passiveSkill && passiveSkill.type === 'REVIVE' && gameState.reviveCooldown === 0) {
+            // Trigger revive!
+            const config = SKILL_CONFIG.REVIVE;
+            const healPercent = config.baseHealPercent;
+            const healAmount = Math.floor(gameState.player.stats.maxHp * healPercent / 100);
+
+            gameState.player.stats.hp = healAmount;
+
+            // Calculate cooldown based on level (max level 4, min cooldown 2)
+            const cooldown = Math.max(2, config.baseCooldown - (passiveSkill.level - 1) * config.upgradeBonus);
+            gameState.reviveCooldown = cooldown;
+
+            playSound('levelUp');
+            addLog(`💫 ${t('reviveTriggered')} ${healAmount} HP!`);
+            addLog(`⏳ ${t('reviveCooldown')}: ${cooldown} ${t('rounds')}`);
+
+            updatePlayerHpBar();
+            updateUI();
+            updatePassiveSkillsUI();
+
+            // Continue combat - don't end the game
+            return;
+        }
+
         playSound('defeat');
         addLog(`💀 ${t('defeated')}`);
 
@@ -2509,10 +2623,16 @@ function openSkillTrainer() {
     const randomSkillType = skillTypes[Math.floor(Math.random() * skillTypes.length)];
     const skillConfig = SKILL_CONFIG[randomSkillType];
     const newSkillName = t(SKILL_TRANSLATION_KEY[randomSkillType]);
+    const isPassive = skillConfig.passive === true;
 
     // Calculate price (increases with level)
-    const currentSkill = gameState.player.equippedSkill;
+    // For passive skills, check passiveSkill; for active skills, check equippedSkill
+    const currentSkill = isPassive ? gameState.player.passiveSkill : gameState.player.equippedSkill;
     const isUpgrade = currentSkill && currentSkill.type === randomSkillType;
+    // Check max level for skills that have it
+    const maxLevel = skillConfig.maxLevel || 99;
+    const currentLevel = isUpgrade ? currentSkill.level : 0;
+    const atMaxLevel = currentLevel >= maxLevel;
     const newLevel = isUpgrade ? currentSkill.level + 1 : 1;
     const skillScale = 1 + (gameState.round - 1) * 0.2 + (gameState.set - 1) * 0.3;
     const price = Math.floor(SKILL_TRAINER_PRICE * newLevel * skillScale);
@@ -2535,6 +2655,10 @@ function openSkillTrainer() {
         case 'SHELVES':
             skillValue = `${skillConfig.baseAbsorb + (newLevel - 1) * skillConfig.upgradeBonus} absorb, ${skillConfig.baseDuration} turns`;
             break;
+        case 'REVIVE':
+            const reviveCooldown = Math.max(2, skillConfig.baseCooldown - (newLevel - 1) * skillConfig.upgradeBonus);
+            skillValue = `${skillConfig.baseHealPercent}% HP, ${reviveCooldown} ${t('rounds')} CD`;
+            break;
     }
 
     let currentSkillHTML = '';
@@ -2555,6 +2679,10 @@ function openSkillTrainer() {
                 break;
             case 'SHELVES':
                 currentSkillValue = `${currentConfig.baseAbsorb + (currentSkill.level - 1) * currentConfig.upgradeBonus} absorb`;
+                break;
+            case 'REVIVE':
+                const currentReviveCooldown = Math.max(2, currentConfig.baseCooldown - (currentSkill.level - 1) * currentConfig.upgradeBonus);
+                currentSkillValue = `${currentConfig.baseHealPercent}% HP, ${currentReviveCooldown} ${t('rounds')} CD`;
                 break;
         }
         currentSkillHTML = `
@@ -2585,12 +2713,12 @@ function openSkillTrainer() {
 
         <p style="text-align: center; color: #666; font-size: 0.85em; margin-bottom: 20px;">
             ${t(SKILL_DESC_KEY[randomSkillType])}<br>
-            SP: 15
+            ${isPassive ? `<span style="color: #9b59b6;">Passive (auto-trigger)</span>` : 'SP: 15'}
         </p>
 
         <div style="display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin: 0 auto;">
-            <button id="learn-skill-btn" style="padding: 12px; background: ${gameState.player.stats.money >= price ? '#28a745' : '#ccc'}; color: white; border: none; border-radius: 8px; cursor: ${gameState.player.stats.money >= price ? 'pointer' : 'not-allowed'}; font-weight: bold; font-size: 1em;" ${gameState.player.stats.money < price ? 'disabled' : ''}>
-                ${isUpgrade ? `⬆️ ${t('upgradeSkill')}` : `📚 ${t('learnSkill')}`} (💰${price})
+            <button id="learn-skill-btn" style="padding: 12px; background: ${gameState.player.stats.money >= price && !atMaxLevel ? '#28a745' : '#ccc'}; color: white; border: none; border-radius: 8px; cursor: ${gameState.player.stats.money >= price && !atMaxLevel ? 'pointer' : 'not-allowed'}; font-weight: bold; font-size: 1em;" ${gameState.player.stats.money < price || atMaxLevel ? 'disabled' : ''}>
+                ${atMaxLevel ? '✓ Max Level' : (isUpgrade ? `⬆️ ${t('upgradeSkill')}` : `📚 ${t('learnSkill')}`)} ${!atMaxLevel ? `(💰${price})` : ''}
             </button>
             ${currentSkill && !isUpgrade ? `
                 <button id="keep-skill-btn" style="padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1em;">
@@ -2607,10 +2735,21 @@ function openSkillTrainer() {
 
     // Event listeners
     document.getElementById('learn-skill-btn')?.addEventListener('click', () => {
-        if (gameState.player.stats.money >= price) {
+        if (gameState.player.stats.money >= price && !atMaxLevel) {
             gameState.player.stats.money -= price;
             playSound('coin'); // Play coin sound for spending money
-            gameState.player.equippedSkill = { type: randomSkillType, level: newLevel };
+
+            // Assign to correct skill slot based on type
+            if (isPassive) {
+                gameState.player.passiveSkill = { type: randomSkillType, level: newLevel };
+                // Reset cooldown when first learning the skill
+                if (!isUpgrade) {
+                    gameState.reviveCooldown = 0;
+                }
+            } else {
+                gameState.player.equippedSkill = { type: randomSkillType, level: newLevel };
+            }
+
             playSound('skill'); // Play skill sound when learning/upgrading skills
             logEvent(`⭐ ${isUpgrade ? t('upgradeSkill') : t('learnSkill')}: ${skillConfig.emoji} ${newSkillName} ${t('skillLevel')}${newLevel}`);
             updateUI();
@@ -2826,6 +2965,7 @@ function restartGame() {
         cloneActive: { active: false, turnsLeft: 0 },
         shelvesActive: { active: false, turnsLeft: 0, absorbLeft: 0 }
     };
+    gameState.reviveCooldown = 0;  // Reset revive cooldown
     gameState.currentPhase = 'playing';
     gameState.board = generateBoard();
 
