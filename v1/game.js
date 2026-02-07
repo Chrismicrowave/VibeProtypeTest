@@ -6,7 +6,7 @@ const VERSION = 'v0.1.1';
 
 // Difficulty Scaling - affects enemies, items, and buffs
 // 1.0 = normal, 1.5 = 50% harder, 2.0 = double difficulty
-const DIFFICULTY = 1.5;
+const DIFFICULTY = 1.0;
 
 // Timing Configuration (in milliseconds)
 // Adjust these values to change game speed
