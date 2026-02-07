@@ -29,7 +29,7 @@ const TIMING = {
     enemyHurtDelay: 200,        // Delay before enemy takes damage
     enemyTurnDelay: 400,        // Delay before enemy attacks
     playerHurtDelay: 200,       // Delay before player takes damage
-    victoryDelay: 1000,         // Delay after victory before loot
+    victoryDelay: 1200,         // Delay after victory before loot
     defeatDelay: 1000,          // Delay after defeat before game over
     skillEmojiDisplay: 500,     // Duration to show skill emoji over enemy
 };
